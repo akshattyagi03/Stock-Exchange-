@@ -78,7 +78,8 @@ export async function POST(request: Request) {
                 password: await bcrypt.hash(password, 10),
                 verifyCode,
                 verifyCodeExpiry,
-                isVerified: false
+                isVerified: false,
+                authProvider: "credentials"
             });
             await newUser.save();
 

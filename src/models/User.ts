@@ -1,14 +1,22 @@
 import mongoose, { Schema, Document, model, models } from "mongoose";
-
+export interface IWatchlistItem {
+    instrumentKey: string;
+    symbol: string;
+    addedAt: Date;
+}
 export interface IUser extends Document {
     name: string;
     username: string;
     email: string;
     password: string;
-    phone: string;
+    role: "user" | "admin";
+    availableBalance: number;
+    frozenBalance: number;
     verifyCode?: string;
     verifyCodeExpiry?: Date;
     isVerified: boolean;
+    watchlist: IWatchlistItem[];
+    authProvider: "credentials" | "google";
 }
 
 const UserSchema = new Schema<IUser>({
@@ -31,7 +39,30 @@ const UserSchema = new Schema<IUser>({
     },
     password: {
         type: String,
-        required: [true, "Password is required"]
+        required: function (this: IUser): boolean {
+            return this.authProvider === "credentials";
+        }
+    },
+    authProvider: {
+        type: String,
+        enum: ["credentials", "google"],
+        required: true,
+    },
+    role: {
+        type: String,
+        enum: ["user", "admin"],
+        default: "user",
+        index: true
+    },
+    availableBalance: {
+        type: Number,
+        default: 999999,
+        min: 0
+    },
+    frozenBalance: {
+        type: Number,
+        default: 0,
+        min: 0
     },
     verifyCode: {
         type: String
@@ -39,9 +70,19 @@ const UserSchema = new Schema<IUser>({
     verifyCodeExpiry: {
         type: Date
     },
-    isVerified:{
+    isVerified: {
         type: Boolean,
         default: false
+    },
+    watchlist: {
+        type: [
+            {
+                instrumentKey: String,
+                symbol: String,
+                addedAt: Date
+            }
+        ],
+        default: []
     }
 }, { timestamps: true });
 

@@ -3,10 +3,13 @@ import mongoose, { Schema, Document, model, models } from "mongoose";
 export interface IOrder extends Document {
   orderId: string;
   stockName: string;
-  quantity: number;              
-  price: number;
+  quantity: number;             
+  remainingQuantity: number;   
+  executedQuantity: number;      
+  price: number;                 
+  executedPrice?: number;        
   orderType: "buy" | "sell";
-  status: "pending" | "executed" | "cancelled";
+  status: "pending" | "partially_executed" | "executed" | "cancelled";
   executedAt?: Date;
   user: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -18,64 +21,86 @@ const OrderSchema = new Schema<IOrder>(
     orderId: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
 
     stockName: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      index: true,
     },
 
     quantity: {
       type: Number,
       required: true,
-      min: 1
+      min: 1,
+    },
+
+    remainingQuantity: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    executedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
 
     price: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
+    },
+
+    executedPrice: {
+      type: Number,
     },
 
     orderType: {
       type: String,
       enum: ["buy", "sell"],
-      required: true
+      required: true,
     },
 
     status: {
       type: String,
-      enum: ["pending", "executed", "cancelled"],
-      default: "pending"
+      enum: [
+        "pending",
+        "partially_executed",
+        "executed",
+        "cancelled",
+      ],
+      default: "pending",
+      index: true,
     },
 
     executedAt: {
-      type: Date
+      type: Date,
     },
 
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
-    }
+      required: true,
+      index: true,
+    },
   },
   {
-    timestamps: true   
+    timestamps: true,
   }
 );
 
-
-// Fast user order history lookup
-OrderSchema.index({ user: 1 });
+OrderSchema.index({ user: 1, createdAt: -1 });
 
 OrderSchema.index({
   stockName: 1,
   status: 1,
   orderType: 1,
-  price: -1,
-  createdAt: 1
+  price: 1,
+  createdAt: 1,
 });
 
 const OrderModel =

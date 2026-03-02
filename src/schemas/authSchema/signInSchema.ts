@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { email, z } from "zod";
 import { passwordSchema } from "../inputSchema/passwordSchema";
-import { usernameSchema } from "../inputSchema/usernameSchema";
+import { emailSchema } from "../inputSchema/emailSchema";
 
 export const signInSchema = z.object({
-  identifier: usernameSchema.or(z.string().email()),
+  identifier: emailSchema,
   password: passwordSchema,
 });

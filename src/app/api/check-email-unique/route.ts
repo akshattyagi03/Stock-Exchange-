@@ -35,7 +35,7 @@ export async function GET(request: Request) {
                     available: false,
                     message: "Email unavailable",
                 },
-                { status: 200 }
+                { status: 200 }  // ✅ ALWAYS 200
             );
         }
         return NextResponse.json(

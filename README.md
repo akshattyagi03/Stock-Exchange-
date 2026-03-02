@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stock‑Ex
 
-## Getting Started
+Stock‑Ex is a full-stack **investment tracking** and **order placement** application built with **Next.js 14 (App Router)**, **TypeScript**, and **MongoDB**.  It lets users sign up, authenticate via email verification, maintain a watchlist of stocks, and create orders through an integrated brokerage API (Upstox).
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🧱 Features
+
+- Email/password authentication with verification codes
+- User watchlist management (add/remove/view stocks)
+- Order creation and retrieval powered by a custom service
+- Integration with Upstox for real‑time candle data and order execution
+- Client‑side form validation using Zod schemas
+- Robust API routes under `src/app/api`
+- Context provider for auth state and helper utilities
+
+---
+
+## 🛠 Tech Stack
+
+| Purpose | Technology |
+|---------|------------|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Database | MongoDB (via Mongoose) |
+| Authentication | NextAuth.js (email provider) |
+| Styling | Tailwind CSS + custom CSS modules |
+| Email | Resend (for verification emails) |
+| Caching | Redis |
+| External API | Upstox broker API |
+
+---
+
+## 🚀 Getting Started
+
+1. **Install dependencies**
+
+   ```bash
+   npm install
+   # or yarn
+   # or pnpm install
+   ```
+
+2. **Environment variables**
+
+   Create a `.env.local` file at project root with the following keys:
+
+   ```env
+   MONGODB_URI=your-mongodb-connection-string
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET=some-random-secret
+   UPSTOX_API_KEY=...
+   UPSTOX_API_SECRET=...
+   REDIS_URL=redis://localhost:6379
+   RESEND_API_KEY=...
+   ```
+
+3. **Run in development**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+4. **Build and production**
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+---
+
+## 📁 Project Structure (key folders)
+
+```
+/src
+  /app               ← Next.js routes, pages, and layouts
+    /api             ← serverless route handlers
+    /login           ← client‑side login page
+    /signup          ← registration page
+    /components      ← shared React components
+    /context         ← React context providers
+    /lib             ← utilities for DB, APIs, etc.
+    /models          ← Mongoose schemas
+    /services        ← domain logic (orders, watchlists)
+    /schemas         ← Zod validation schemas
+    /utils           ← helper functions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧪 Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project currently does not include automated tests.  You can add Jest/Playwright later.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📦 Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Deploy on Vercel with the same environment variables.
+- Ensure your MongoDB and Redis instances are reachable from Vercel.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🤝 Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/xyz`)
+3. Make your changes and add tests
+4. Submit a pull request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📄 License
+
+MIT License. See the `LICENSE` file.
+
