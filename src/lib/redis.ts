@@ -1,15 +1,30 @@
-import { createClient } from "redis";
+import { createClient } from "redis"
 
-if (!process.env.REDIS_URL) {
-  throw new Error("Missing REDIS_URL");
+const globalForRedis = global as unknown as {
+  redis: ReturnType<typeof createClient> | undefined
 }
 
-export const redis = createClient({
-  url: process.env.REDIS_URL,
-});
+export const redis =
+  globalForRedis.redis ??
+  createClient({
+    username: "default",
+    password: process.env.REDIS_PASSWORD,
+    socket: {
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+    },
+  })
 
-redis.on("error", (err) => console.error("Redis Client Error", err));
-
-if (!redis.isOpen) {
-  await redis.connect();
+if (!globalForRedis.redis) {
+  globalForRedis.redis = redis
 }
+
+redis.on("error", (err) => console.error("Redis Error:", err))
+
+export async function connectRedis() {
+  if (!redis.isOpen) {
+    await redis.connect()
+  }
+}
+
+// pHv7OPlXJjIM3PvuYUeAiOcloguSrvI

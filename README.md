@@ -7,11 +7,15 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 ## 🧱 Features
 
 - Email/password and Google OAuth authentication with email verification
+- Dashboard with portfolio overview and performance metrics
+- Real-time portfolio tracking with P&L calculations
+- Holdings management with detailed position tracking
 - User watchlist management (add/remove/view stocks)
 - Order creation and retrieval powered by a custom service
-- AI-powered stock analysis using Google Gemini 2.0 Flash
-- Stock comparison and financial insights
-- Integration with Upstox for real‑time candle data and order execution
+- AI-powered stock analysis and comparison using Google Gemini 2.0 Flash
+- Interactive charts and analytics
+- Market data integration with Upstox API
+- Funds management (deposits and withdrawals)
 - Client‑side form validation using Zod schemas
 - Robust API routes under `src/app/api`
 - Context provider for auth state and helper utilities
@@ -26,7 +30,8 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 | Language | TypeScript |
 | Database | MongoDB (via Mongoose) |
 | Authentication | NextAuth.js (Credentials + Google OAuth) |
-| Styling | Tailwind CSS + custom CSS modules |
+| Styling | Tailwind CSS + Shadcn UI |
+| Charts | Recharts |
 | Email | Resend (for verification emails) |
 | AI | Google Gemini 2.0 Flash |
 | External API | Upstox broker API |
@@ -87,16 +92,34 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 /src
   /app               ← Next.js routes, pages, and layouts
     /(auth)          ← authentication pages (sign-in, sign-up, verify)
+    /(dashboard)     ← protected dashboard routes
+      /dashboard     ← main dashboard with portfolio overview
+      /holdings      ← holdings management
+      /orders        ← order history and management
+      /watchlist     ← stock watchlist
+      /markets       ← market data and charts
+      /ai-advisor    ← AI-powered stock analysis
+      /analytics     ← portfolio analytics
+      /funds         ← funds management
     /api             ← serverless route handlers
-      /ai            ← AI-powered analysis endpoints
+      /ai            ← AI-powered analysis endpoints (analyze, compare)
       /auth          ← NextAuth configuration
       /sign-up       ← user registration endpoint
+      /verify-code   ← email verification endpoint
       /check-email-unique ← email validation endpoint
+      /holdings      ← holdings CRUD operations
+      /orders        ← order management (create, get)
+      /watchlist     ← watchlist operations
+      /markets       ← market data endpoints
+      /portfolio-summary ← portfolio metrics
+      /upstox        ← Upstox API integration
   /components        ← shared React components
+    /ui              ← Shadcn UI components
   /context           ← React context providers (AuthProvider)
   /helpers           ← helper functions (email sending)
-  /lib               ← utilities for DB, APIs, Gemini AI
-  /models            ← Mongoose schemas (User, Orders)
+  /hooks             ← custom React hooks
+  /lib               ← utilities for DB, APIs, Gemini AI, Upstox
+  /models            ← Mongoose schemas (User, Orders, Holdings)
   /schemas           ← Zod validation schemas
     /authSchema      ← authentication schemas
     /inputSchema     ← input validation schemas
