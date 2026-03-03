@@ -1,3 +1,4 @@
+"use client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,13 +10,48 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { signInSchema } from "@/schemas/authSchema/signInSchema"
+import * as z from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useState } from "react"
+import { signIn } from "next-auth/react"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const form = useForm<z.infer<typeof signInSchema>>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      identifier: "",
+      password: ""
+    }
+  })
+  const onSubmit = async (data: z.infer<typeof signInSchema>) => {
+    setIsSubmitting(true);
+
+    const result = await signIn("credentials", {
+      identifier: data.identifier,
+      password: data.password,
+      redirect: false,
+    });
+
+    setIsSubmitting(false);
+
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    }
+  };
   return (
-    <form className={cn("flex flex-col gap-6", className)} {...props}>
+    <form onSubmit={form.handleSubmit(onSubmit)} className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Login to your account</h1>
@@ -24,27 +60,31 @@ export function LoginForm({
           </p>
         </div>
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <FieldLabel htmlFor="identifier">Email</FieldLabel>
+          <Input
+            id="identifier"
+            type="email"
+            placeholder="johndoe@example.com"
+            {...form.register("identifier")}
+          />
         </Field>
         <Field>
           <div className="flex items-center">
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
-              href="#"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </a>
           </div>
-          <Input id="password" type="password" required />
+          <Input
+            id="password"
+            type="password"
+            placeholder="Secret_Password123"
+            {...form.register("password")}
+          />
         </Field>
         <Field>
           <Button type="submit">Login</Button>
         </Field>
         <FieldSeparator>Or continue with</FieldSeparator>
         <Field>
-          <Button variant="outline" type="button">
+          <Button variant="outline" type="button" onClick={() => signIn("google")}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 48 48"

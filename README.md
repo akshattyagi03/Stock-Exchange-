@@ -33,6 +33,11 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 
 ## 🚀 Getting Started
 
+> **Note:** When adding interactive React components such as forms or buttons that rely on client-side hooks (e.g. `useState`, `useForm`, `signIn` from NextAuth), make sure the file begins with the `"use client"` directive. Without it the component will be rendered as a server component and event handlers (like `onClick`) will be stripped.
+>
+> For example, `src/components/login-form.tsx` needs the directive in order for the login button and Google sign-in to work properly.
+
+
 1. **Install dependencies**
 
    ```bash

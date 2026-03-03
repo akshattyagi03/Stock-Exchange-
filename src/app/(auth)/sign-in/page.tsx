@@ -1,14 +1,9 @@
 "use client"
-import z from "zod"
 import { GalleryVerticalEnd } from "lucide-react"
 import { DotLottieReact } from "@lottiefiles/dotlottie-react"
 import { LoginForm } from "@/components/login-form"
-import { signInSchema } from "@/schemas/authSchema/signInSchema"
 
 export default function SignupPage() {
-  const onSubmit = (data: z.infer<typeof signInSchema>)=>{
-
-  }
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
@@ -39,33 +34,3 @@ export default function SignupPage() {
     </div>
   )
 }
-
-// 'use client'
-// import { zodResolver } from "@hookform/resolvers/zod"
-// import { useForm } from "react-hook-form"
-// import * as z from "zod"
-// import Link from "next/link"
-// import axios, {AxiosError} from "axios"
-// import { useState } from "react"
-// import {useDebounceValue} from "usehooks-ts"
-// import { toast } from "sonner"
-// import { useRouter } from "next/navigation"
-// import { signInSchema } from "@/schemas/authSchema/signInSchema"
-// export default function Page() {
-//   const [email, setEmail] = useState("");
-//   const [emailMessage, setEmailMessage] = useState("");
-//   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-//   const [isSubmitting, setIsSubmitting] = useDebounceValue(email, 300);
-//   const router = useRouter();
-
-//   const form = useForm<z.infer<typeof signInSchema>>({
-//     resolver: zodResolver(signInSchema),
-//     defaultValues: {
-//       identifier: '',
-//       password: ''
-//     }
-//   });
-//   return (
-//     <div>Page</div>
-//   );
-// }
