@@ -1,22 +1,21 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
-  IconCamera,
-  IconChartBar,
   IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
   IconHelp,
   IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
   IconSearch,
   IconSettings,
-  IconUsers,
+  IconChartLine,
+  IconWallet,
+  IconReceipt2,
+  IconStar,
+  IconHistory,
+  IconChartPie,
+  IconCurrencyRupee,
+  IconSparkles,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -32,13 +31,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import Link from "next/link"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+const staticData = {
   navMain: [
     {
       title: "Dashboard",
@@ -46,111 +41,72 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "/lifecycle",
-      icon: IconListDetails,
+      title: "Markets",
+      url: "/markets",
+      icon: IconChartLine,
     },
     {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
+      title: "Holdings",
+      url: "/holdings",
+      icon: IconWallet,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
+      title: "Orders",
+      url: "/orders",
+      icon: IconReceipt2,
     },
     {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+      title: "Watchlist",
+      url: "/watchlist",
+      icon: IconStar,
     },
     {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
+      title: "AI Advisor",
+      url: "/ai-advisor",
+      icon: IconSparkles,
+    }
   ],
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
     },
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
+      name: "Trade History",
+      url: "/trade-history",
+      icon: IconHistory,
     },
     {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
+      name: "Portfolio Analytics",
+      url: "/analytics",
+      icon: IconChartPie,
     },
     {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
+      name: "Funds & Balance",
+      url: "/funds",
+      icon: IconCurrencyRupee,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session } = useSession()
+
+  const data = {
+    user: {
+      _id: session?.user?._id || "",
+      name: session?.user?.name || "User",
+      email: session?.user?.email || "user@example.com",
+      avatar: session?.user?.image || "https://img.freepik.com/premium-vector/investor-art-business-illustration_1295705-24340.jpg?semt=ais_hybrid&w=740&q=80",
+    },
+    navMain: staticData.navMain,
+    navSecondary: staticData.navSecondary,
+    documents: staticData.documents,
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -160,10 +116,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="#">
+              <Link href="/">
                 <IconInnerShadowTop className="size-5!" />
                 <span className="text-base font-semibold">Acme Inc.</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -43,12 +43,13 @@ export function LoginForm({
 
     setIsSubmitting(false);
 
-    if (result?.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Login successful!");
-      router.push("/dashboard");
+    if (!result || !result.ok) {
+      toast.error("Invalid email or password");
+      return;
     }
+
+    toast.success("Login successful!");
+    router.push("/dashboard");
   };
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className={cn("flex flex-col gap-6", className)} {...props}>

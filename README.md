@@ -6,9 +6,11 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 
 ## 🧱 Features
 
-- Email/password authentication with verification codes
+- Email/password and Google OAuth authentication with email verification
 - User watchlist management (add/remove/view stocks)
 - Order creation and retrieval powered by a custom service
+- AI-powered stock analysis using Google Gemini 2.0 Flash
+- Stock comparison and financial insights
 - Integration with Upstox for real‑time candle data and order execution
 - Client‑side form validation using Zod schemas
 - Robust API routes under `src/app/api`
@@ -23,10 +25,10 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
 | Database | MongoDB (via Mongoose) |
-| Authentication | NextAuth.js (email provider) |
+| Authentication | NextAuth.js (Credentials + Google OAuth) |
 | Styling | Tailwind CSS + custom CSS modules |
 | Email | Resend (for verification emails) |
-| Caching | Redis |
+| AI | Google Gemini 2.0 Flash |
 | External API | Upstox broker API |
 
 ---
@@ -54,10 +56,12 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
    MONGODB_URI=your-mongodb-connection-string
    NEXTAUTH_URL=http://localhost:3000
    NEXTAUTH_SECRET=some-random-secret
-   UPSTOX_API_KEY=...
-   UPSTOX_API_SECRET=...
-   REDIS_URL=redis://localhost:6379
-   RESEND_API_KEY=...
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   GEMINI_API_KEY=your-gemini-api-key
+   RESEND_API_KEY=your-resend-api-key
+   UPSTOX_API_KEY=your-upstox-api-key
+   UPSTOX_API_SECRET=your-upstox-api-secret
    ```
 
 3. **Run in development**
@@ -82,16 +86,25 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 ```
 /src
   /app               ← Next.js routes, pages, and layouts
+    /(auth)          ← authentication pages (sign-in, sign-up, verify)
     /api             ← serverless route handlers
-    /login           ← client‑side login page
-    /signup          ← registration page
-    /components      ← shared React components
-    /context         ← React context providers
-    /lib             ← utilities for DB, APIs, etc.
-    /models          ← Mongoose schemas
-    /services        ← domain logic (orders, watchlists)
-    /schemas         ← Zod validation schemas
-    /utils           ← helper functions
+      /ai            ← AI-powered analysis endpoints
+      /auth          ← NextAuth configuration
+      /sign-up       ← user registration endpoint
+      /check-email-unique ← email validation endpoint
+  /components        ← shared React components
+  /context           ← React context providers (AuthProvider)
+  /helpers           ← helper functions (email sending)
+  /lib               ← utilities for DB, APIs, Gemini AI
+  /models            ← Mongoose schemas (User, Orders)
+  /schemas           ← Zod validation schemas
+    /authSchema      ← authentication schemas
+    /inputSchema     ← input validation schemas
+    /orderSchema     ← order validation schemas
+  /services          ← domain logic (orders, watchlists)
+  /types             ← TypeScript type definitions
+  /utils             ← helper functions
+/emails              ← email templates (VerificationEmail)
 ```
 
 ---
@@ -105,7 +118,9 @@ This project currently does not include automated tests.  You can add Jest/Playw
 ## 📦 Deployment
 
 - Deploy on Vercel with the same environment variables.
-- Ensure your MongoDB and Redis instances are reachable from Vercel.
+- Ensure your MongoDB instance is reachable from Vercel.
+- Configure Google OAuth credentials for production domain.
+- Add production URL to NEXTAUTH_URL environment variable.
 
 ---
 
