@@ -14,7 +14,6 @@ export async function sendVerificationEmail(
       subject: "STOCKS EX | Verification Code for Registration",
       react: VerificationEmail({ name, verifyCode }),
     });
-
     if (error) {
       console.error("Resend error:", error);
       return {

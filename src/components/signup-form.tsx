@@ -89,25 +89,29 @@ export function SignupForm({
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className={cn("flex flex-col gap-6", className)}
+      className={cn(
+        "flex flex-col gap-6 text-white",
+        className
+      )}
       {...props}
     >
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-2xl font-bold text-white">Create your account</h1>
+          <p className="text-white/70 text-sm">
             Fill in the form below to create your account
           </p>
         </div>
 
         <Field>
           <FieldLabel>Full Name</FieldLabel>
-          <Input placeholder="John Doe" {...form.register("name")} />
+          <Input placeholder="John Doe" className="bg-zinc-900 border-white/10 text-white placeholder:text-zinc-500" {...form.register("name")} />
         </Field>
 
         <Field>
           <FieldLabel>Email</FieldLabel>
           <Input
+            className="bg-zinc-900 border-white/10 text-white placeholder:text-zinc-500"
             type="email"
             placeholder="johndoe@example.com"
             {...form.register("email")}
@@ -134,20 +138,28 @@ export function SignupForm({
 
         <Field>
           <FieldLabel>Password</FieldLabel>
-          <Input type="password" placeholder="Secret_Password123" {...form.register("password")} />
+          <Input type="password" className="bg-zinc-900 border-white/10 text-white placeholder:text-zinc-500" placeholder="Secret_Password123" {...form.register("password")} />
         </Field>
 
 
         <Field>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+          <Button className="bg-white text-black hover:bg-zinc-200 font-medium" type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Creating..." : "Create Account"}
           </Button>
         </Field>
 
-        <FieldSeparator>Or continue with</FieldSeparator>
+        <div className="relative text-center text-sm text-white/60">
+          <span className="bg-zinc-900 px-2 relative z-10">
+            Or continue with
+          </span>
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+        </div>
 
         <Field>
           <Button
+            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 text-white"
             variant="outline"
             type="button"
             onClick={() => signIn("google")}

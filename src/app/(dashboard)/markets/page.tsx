@@ -2,8 +2,6 @@
 
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
-
 interface Stock {
     symbol: string
     name: string
@@ -24,10 +22,10 @@ export default function MarketsPage() {
             }
         }
         fetchStocks()
-        const interval = setInterval(fetchStocks, 30000)
+        const interval = setInterval(fetchStocks, 10000)
         return () => clearInterval(interval)
     }, [])
-    if (loading) return <div className="p-6">Loading markets...<Loader2 className="animate-spin"/></div>
+    if (loading) return <div className="p-6">Loading markets...<Loader2 className="animate-spin" /></div>
     return (
         <div className="p-6">
             <h1 className="text-2xl font-semibold mb-6">Markets</h1>

@@ -48,7 +48,7 @@ export function LoginForm({
       return;
     }
 
-    toast.success("Login successful!");
+    toast.success("Login successful!", { position: "top-center" });
     router.push("/dashboard");
   };
   return (
@@ -83,9 +83,23 @@ export function LoginForm({
         <Field>
           <Button type="submit">Login</Button>
         </Field>
-        <FieldSeparator>Or continue with</FieldSeparator>
+        <div className="relative text-center text-sm text-white/60">
+          <span className="bg-zinc-900 px-2 relative z-10">
+            Or continue with
+          </span>
+
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+        </div>
+        
         <Field>
-          <Button variant="outline" type="button" onClick={() => signIn("google")}>
+          <Button
+            variant="outline"
+            type="button"
+            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 text-white"
+            onClick={() => signIn("google")}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 48 48"

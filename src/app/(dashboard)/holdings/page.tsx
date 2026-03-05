@@ -15,6 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { Loader2 } from "lucide-react"
 
 interface IHolding {
     _id: string
@@ -134,7 +135,7 @@ export default function Page() {
     ]
 
     if (loading) {
-        return <div className="p-4">Loading holdings...</div>
+        return <div className="p-4">Loading holdings... <Loader2/></div>
     }
 
     if (error) {

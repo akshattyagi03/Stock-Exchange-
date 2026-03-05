@@ -1,5 +1,5 @@
 "use client"
-
+import { signOut } from "next-auth/react";
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -28,7 +28,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-
+import { useTheme } from "next-themes"
+import { IconSun, IconMoon, IconDeviceLaptop } from "@tabler/icons-react"
 export function NavUser({
   user,
 }: {
@@ -39,7 +40,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-
+  const { setTheme } = useTheme()
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -50,8 +51,8 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarImage src="https://play-lh.googleusercontent.com/-zYcIjV0McgHBmrHPug8SyMDavRUmrMNNu3PR3yF-Bx1MhdxttcOS3fhQCVIhm35rA=w240-h480-rw" alt={user.name} />
+                <AvatarFallback className="rounded-lg">AT</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -98,7 +99,27 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+
+            <DropdownMenuLabel>Theme</DropdownMenuLabel>
+
+            <DropdownMenuItem onClick={() => setTheme("light")}>
+              <IconSun className="mr-2 size-4" />
+              Light
+            </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={() => setTheme("dark")}>
+              <IconMoon className="mr-2 size-4" />
+              Dark
+            </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={() => setTheme("system")}>
+              <IconDeviceLaptop className="mr-2 size-4" />
+              System
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

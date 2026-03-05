@@ -12,7 +12,7 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 - Holdings management with detailed position tracking
 - User watchlist management (add/remove/view stocks)
 - Order creation and retrieval powered by a custom service
-- AI-powered stock analysis and comparison using Google Gemini 2.0 Flash
+- AI-powered stock analysis and comparison using Google Gemini 2.5 Flash
 - Interactive charts and analytics
 - Market data integration with Upstox API
 - Funds management (deposits and withdrawals)
@@ -33,7 +33,7 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 | Styling | Tailwind CSS + Shadcn UI |
 | Charts | Recharts |
 | Email | Resend (for verification emails) |
-| AI | Google Gemini 2.0 Flash |
+| AI | Google Gemini 2.5 Flash |
 | External API | Upstox broker API |
 
 ---

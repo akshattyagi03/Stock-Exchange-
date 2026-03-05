@@ -1,5 +1,12 @@
-export default function Page() {
+import HeroSection from "@/components/hero-section"
+
+export default function Home() {
   return (
-    <div>Landing Page</div>
-  );
+    <div>
+      <HeroSection 
+        imageUrl="/portfolio-dashboard.png"
+        videoUrl="/demo.mp4"
+      />
+    </div>
+  )
 }
