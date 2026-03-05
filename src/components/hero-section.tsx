@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useCallback, useState } from "react"
 import Image from "next/image"
 import DotBackground from "./dot-background"
-
+import Link from "next/link"
 interface NavItem {
   id: string
   label: string
@@ -211,7 +211,7 @@ const HeroSection = ({
           ref={targetRef}
           className="mt-8 px-6 py-3 rounded-xl border border-white/40 hover:border-white text-white hover:bg-white/10 transition"
         >
-          {buttonText}
+          <Link href="/sign-in">{buttonText}</Link>
         </button>
       </div>
 
