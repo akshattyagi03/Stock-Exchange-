@@ -8,6 +8,7 @@ const CACHE_TTL = 30 // seconds
 export async function GET() {
   try {
     await connectRedis()
+
     const cached = await redis.get(CACHE_KEY)
     if (cached) {
       console.log("Serving from Redis cache")
@@ -15,6 +16,7 @@ export async function GET() {
         stocks: JSON.parse(cached),
       })
     }
+
     const accessToken = process.env.UPSTOX_ACCESS_TOKEN
 
     const instrumentKeys = [
@@ -40,23 +42,29 @@ export async function GET() {
 
     const formattedStocks = Object.entries(rawData).map(
       ([instrumentKey, stock]: [string, any]) => {
-        const lastPrice = stock.last_price
-        const prevClose = stock.ohlc?.close || 0
 
-        const change =
-          prevClose !== 0
-            ? ((lastPrice - prevClose) / prevClose) * 100
+        const lastPrice = stock.last_price
+        const netChange = stock.net_change
+
+        // previous close = last price - change
+        const previousClose = lastPrice - netChange
+
+        const changePercent =
+          previousClose !== 0
+            ? (netChange / previousClose) * 100
             : 0
 
         return {
           instrumentKey,
           symbol: stock.symbol,
           name: stock.name,
-          price: lastPrice,
-          change: Number(change.toFixed(2)),
+          price: Number(lastPrice.toFixed(2)),
+          change: Number(changePercent.toFixed(2)),
+          changeValue: Number(netChange.toFixed(2)),
         }
       }
     )
+
     await redis.set(CACHE_KEY, JSON.stringify(formattedStocks), {
       EX: CACHE_TTL,
     })
@@ -64,8 +72,10 @@ export async function GET() {
     console.log("Stored in Redis")
 
     return NextResponse.json({ stocks: formattedStocks })
+
   } catch (error: any) {
     console.error("Markets Error:", error.response?.data || error.message)
+
     return NextResponse.json(
       { message: "Failed to fetch market data" },
       { status: 500 }

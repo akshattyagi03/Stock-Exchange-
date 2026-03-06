@@ -1,5 +1,5 @@
 "use client"
-
+import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 interface Stock {
@@ -42,15 +42,26 @@ export default function MarketsPage() {
                     </thead>
                     <tbody>
                         {stocks.map((stock) => (
-                            <tr key={stock.symbol} className="border-b hover:bg-muted/50">
-                                <td className="p-3 font-medium">{stock.symbol}</td>
+                            <tr
+                                key={stock.symbol}
+                                className="border-b hover:bg-muted/50 cursor-pointer"
+                            >
+                                <td className="p-3 font-medium">
+                                    <Link href={`/markets/${stock.symbol}`} className="block w-full h-full">
+                                        {stock.symbol}
+                                    </Link>
+                                </td>
+
                                 <td className="p-3">{stock.name}</td>
-                                <td className="p-3">₹ {stock.price}</td>
+
+                                <td className="p-3">₹ {stock.price.toFixed(2)}</td>
+
                                 <td
                                     className={`p-3 ${stock.change >= 0 ? "text-green-600" : "text-red-600"
                                         }`}
                                 >
-                                    {stock.change}%
+                                    {stock.change > 0 ? "+" : ""}
+                                    {stock.change.toFixed(2)}%
                                 </td>
                             </tr>
                         ))}
