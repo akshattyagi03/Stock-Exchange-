@@ -1,17 +1,36 @@
-import { getServerSession } from "next-auth"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const session = await getServerSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/sign-in")
+    }
+  }, [status, router])
+
+  if (status === "loading" || !mounted) {
+    return null
+  }
 
   if (!session) {
-    redirect("/sign-in")
+    return null
   }
 
   return (

@@ -1,22 +1,27 @@
 import axios from "axios"
 import { NextResponse } from "next/server"
-import { redis } from "@/lib/redis"
+import { redis, connectRedis } from "@/lib/redis"
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
+    await connectRedis()
+
     const { symbol } = await params
     const { searchParams } = new URL(req.url)
 
     const range = searchParams.get("range") || "1M"
     const cacheKey = `stock:${symbol}:${range}`
 
-    /* ---------------- REDIS CACHE ---------------- */
+    /* ---------- REDIS CACHE ---------- */
 
     const cached = await redis.get(cacheKey)
-    if (cached) return NextResponse.json(JSON.parse(cached))
+    if (cached) {
+      console.log("Serving from Redis cache")
+      return NextResponse.json(JSON.parse(cached))
+    }
 
     const accessToken = process.env.UPSTOX_ACCESS_TOKEN
 
@@ -35,58 +40,78 @@ export async function GET(
 
     const today = new Date()
     let fromDate = new Date()
-
     let url = ""
 
-    /* ---------------- RANGE LOGIC ---------------- */
+    /* ---------- RANGE LOGIC ---------- */
 
     if (range === "1D") {
-      url = `https://api.upstox.com/v3/historical-candle/intraday/${encodeURIComponent(
+      url = `https://api.upstox.com/v2/historical-candle/intraday/${encodeURIComponent(
         instrumentKey
-      )}/minutes/5`
-    }
-
-    else if (range === "1W") {
+      )}/1minute`
+    } else if (range === "1W") {
       fromDate.setDate(today.getDate() - 7)
-
       url = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
         instrumentKey
-      )}/minutes/15/${today.toISOString().split("T")[0]}/${fromDate
-        .toISOString()
-        .split("T")[0]}`
-    }
-
-    else if (range === "1M") {
+      )}/minutes/15/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
+    } else if (range === "1M") {
       fromDate.setMonth(today.getMonth() - 1)
-
       url = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
         instrumentKey
-      )}/minutes/60/${today.toISOString().split("T")[0]}/${fromDate
-        .toISOString()
-        .split("T")[0]}`
-    }
-
-    else {
+      )}/minutes/60/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
+    } else {
       fromDate.setFullYear(today.getFullYear() - 1)
-
       url = `https://api.upstox.com/v2/historical-candle/${encodeURIComponent(
         instrumentKey
-      )}/day/${today.toISOString().split("T")[0]}/${fromDate
-        .toISOString()
-        .split("T")[0]}`
+      )}/day/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
     }
 
-    /* ---------------- FETCH FROM UPSTOX ---------------- */
+    console.log("UPSTOX URL:", url)
 
-    const response = await axios.get(url, {
+    /* ---------- FETCH DATA ---------- */
+
+    let response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
     })
 
-    const candles = response.data.data.candles
+    let candles = response.data?.data?.candles || []
 
+    /* ---------- FALLBACK IF INTRADAY EMPTY ---------- */
+
+    if (range === "1D" && candles.length === 0) {
+      console.log("Intraday empty → fallback to last session")
+
+      fromDate.setDate(today.getDate() - 1)
+
+      const fallbackUrl = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
+        instrumentKey
+      )}/minutes/5/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
+
+      const fallbackRes = await axios.get(fallbackUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      })
+
+      candles = fallbackRes.data?.data?.candles || []
+
+      // Filter to only the most recent trading day
+      // Upstox returns candles newest-first before we reverse
+      if (candles.length > 0) {
+        const lastCandleDate = new Date(candles[0][0]).toDateString()
+        candles = candles.filter(
+          (c: any) => new Date(c[0]).toDateString() === lastCandleDate
+        )
+      }
+    }
+
+    /* ---------- FORMAT FOR CHART ---------- */
+
+    // Upstox timestamps like "2024-03-11T09:15:00+05:30" are parsed by
+    // new Date() into correct UTC milliseconds — no IST offset needed on frontend
     const chartData = candles.map((c: any) => ({
       time: Math.floor(new Date(c[0]).getTime() / 1000),
       open: Number(c[1]),
@@ -98,13 +123,16 @@ export async function GET(
 
     const result = chartData.reverse()
 
-    await redis.set(cacheKey, JSON.stringify(result), { EX: 30 })
+    /* ---------- CACHE ---------- */
+
+    if (result.length > 0) {
+      await redis.set(cacheKey, JSON.stringify(result), { EX: 30 })
+    }
 
     return NextResponse.json(result)
 
   } catch (error: any) {
     console.error("Stocks API Error:", error.response?.data || error.message)
-
     return NextResponse.json(
       { error: "Failed to fetch chart data" },
       { status: 500 }

@@ -15,8 +15,6 @@ export default function StockChart({ symbol }: Props) {
 
   const [range, setRange] = useState("1D")
 
-  const IST_OFFSET = 5.5 * 60 * 60
-
   /* ---------------- Create Chart Once ---------------- */
 
   useEffect(() => {
@@ -36,11 +34,26 @@ export default function StockChart({ symbol }: Props) {
       },
       localization: {
         locale: "en-IN",
+        timeFormatter: (time: number) =>
+          new Date(time * 1000).toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
       },
       timeScale: {
         borderColor: "#1e293b",
         timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: (time: number) =>
+          new Date(time * 1000).toLocaleTimeString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
       },
     })
 
@@ -56,13 +69,13 @@ export default function StockChart({ symbol }: Props) {
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
       priceScaleId: "volume",
-      lastValueVisible: false,    // ← hides the fixed 797K label
-      priceLineVisible: false,    // ← hides the horizontal price line
+      lastValueVisible: false,
+      priceLineVisible: false,
     })
 
     volumeSeries.priceScale().applyOptions({
       scaleMargins: {
-        top: 0.8, // volume takes bottom 20% of chart
+        top: 0.8,
         bottom: 0,
       },
     })
@@ -70,6 +83,72 @@ export default function StockChart({ symbol }: Props) {
     chartRef.current = chart
     seriesRef.current = candleSeries
     volumeSeriesRef.current = volumeSeries
+
+    /* ---------------- Crosshair Tooltip ---------------- */
+
+    const toolTip = document.createElement("div")
+    toolTip.style.cssText = `
+      position: absolute;
+      display: none;
+      padding: 6px 10px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #cbd5f5;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    `
+    container.style.position = "relative"
+    container.appendChild(toolTip)
+
+    chart.subscribeCrosshairMove((param) => {
+      if (
+        !param.point ||
+        !param.time ||
+        param.point.x < 0 ||
+        param.point.y < 0
+      ) {
+        toolTip.style.display = "none"
+        return
+      }
+
+      const date = new Date((param.time as number) * 1000)
+      const formatted = date.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+
+      const data = param.seriesData.get(candleSeries) as any
+      if (!data) {
+        toolTip.style.display = "none"
+        return
+      }
+
+      toolTip.style.display = "block"
+      toolTip.innerHTML = `
+        <div style="color:#94a3b8;margin-bottom:4px">${formatted}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
+          <span style="color:#94a3b8">O</span><span>₹${data.open.toFixed(2)}</span>
+          <span style="color:#94a3b8">H</span><span style="color:#22c55e">₹${data.high.toFixed(2)}</span>
+          <span style="color:#94a3b8">L</span><span style="color:#ef4444">₹${data.low.toFixed(2)}</span>
+          <span style="color:#94a3b8">C</span><span>₹${data.close.toFixed(2)}</span>
+        </div>
+      `
+
+      const containerWidth = container.clientWidth
+      const tooltipWidth = 160
+      const left = param.point.x + 16
+      toolTip.style.left = (left + tooltipWidth > containerWidth ? left - tooltipWidth - 32 : left) + "px"
+      toolTip.style.top = Math.max(0, param.point.y - 60) + "px"
+    })
+
+    /* ---------------- Resize ---------------- */
 
     const handleResize = () => {
       chart.applyOptions({ width: container.clientWidth })
@@ -80,6 +159,7 @@ export default function StockChart({ symbol }: Props) {
     return () => {
       window.removeEventListener("resize", handleResize)
       chart.remove()
+      toolTip.remove()
     }
   }, [])
 
@@ -87,6 +167,9 @@ export default function StockChart({ symbol }: Props) {
 
   useEffect(() => {
     async function loadChartData() {
+      seriesRef.current?.setData([])
+      volumeSeriesRef.current?.setData([])
+
       const res = await fetch(`/api/stocks/${symbol}?range=${range}`)
       const data = await res.json()
 
@@ -94,9 +177,9 @@ export default function StockChart({ symbol }: Props) {
         console.log("No chart data returned")
         return
       }
-      console.log("Sample volume:", data[0]?.volume)
+
       const candleData = data.map((d: any) => ({
-        time: d.time + IST_OFFSET,
+        time: d.time,
         open: d.open,
         high: d.high,
         low: d.low,
@@ -104,9 +187,9 @@ export default function StockChart({ symbol }: Props) {
       }))
 
       const volumeData = data.map((d: any) => ({
-        time: d.time + IST_OFFSET,
+        time: d.time,
         value: d.volume,
-        color: d.close >= d.open ? "#22c55e50" : "#ef444450", // green/red with opacity
+        color: d.close >= d.open ? "#22c55e50" : "#ef444450",
       }))
 
       seriesRef.current?.setData(candleData)

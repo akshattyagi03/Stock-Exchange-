@@ -1,22 +1,21 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { AuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import { streamGeminiResponse } from "@/lib/gemini";
+
 export const runtime = "nodejs";
 
 const analyzeSchema = z.object({
-  stock: z.string().min(1, "Stock symbol is required"),
+  symbol: z.string().min(1, "Stock symbol is required"),
+  messages: z.array(
+    z.object({
+      role: z.enum(["user", "assistant"]),
+      content: z.string(),
+    })
+  ).min(1),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    /*
-    const session = await getServerSession(AuthOptions);
-    if (!session || !session.user?._id) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-    */
     const body = await req.json();
     const parsed = analyzeSchema.safeParse(body);
 
@@ -24,58 +23,32 @@ export async function POST(req: NextRequest) {
       return new Response("Invalid input", { status: 400 });
     }
 
-    const { stock } = parsed.data;
+    const { symbol, messages } = parsed.data;
+
+    // Build conversation history for context
+    const history = messages
+      .slice(0, -1) // everything except the last message
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+      .join("\n\n")
+
+    const latestQuestion = messages[messages.length - 1].content
 
     const prompt = `
-Provide a professional, data-driven financial analysis of ${stock}.
+You are a professional financial advisor AI specialising in Indian stock markets (NSE/BSE).
+You are currently analysing the stock: ${symbol}.
 
-Use recent available financial data and include specific numerical metrics wherever possible.
+${history ? `Previous conversation:\n${history}\n\n` : ""}
+User's question: ${latestQuestion}
 
-Structure the response as follows:
-
-1. Company Overview
-- Market Cap (in USD)
-- Sector & Industry
-- Current Stock Price
-- 52-Week High / Low
-
-2. Valuation Metrics
-- P/E Ratio
-- Forward P/E
-- PEG Ratio
-- Price-to-Book (P/B)
-- EV/EBITDA
-- Dividend Yield (%)
-
-3. Financial Health
-- Revenue (latest annual)
-- Revenue Growth (% YoY)
-- Net Profit Margin (%)
-- EPS (latest)
-- Debt-to-Equity Ratio
-- Current Ratio
-- Free Cash Flow
-
-4. Growth & Performance
-- 3-Year Revenue CAGR (%)
-- 3-Year EPS Growth (%)
-- Return on Equity (ROE %)
-- Return on Assets (ROA %)
-
-5. Risk Assessment
-Provide numerical scores (1–10 scale):
-- Volatility (1 = very stable, 10 = highly volatile)
-- Financial Risk (1 = very low, 10 = very high)
-- Competitive Risk (1 = low, 10 = high)
-- Overall Risk Score (1–10)
-
-6. Investment Suitability
-- Short-term suitability score (1–10)
-- Long-term suitability score (1–10)
-- Brief justification (3–5 lines)
-
-Keep the tone professional, analytical, and concise.
-Avoid vague statements — prioritize numerical and measurable insights.
+Guidelines:
+- If this is the first message or a general analysis request, provide a structured breakdown covering:
+  valuation metrics, financial health, growth indicators, risk scores (1–10), and investment suitability.
+- For follow-up questions, answer concisely and reference the stock context.
+- Always use specific numbers, percentages, and ratios where possible.
+- Keep the tone professional, analytical, and concise.
+- Avoid vague statements — prioritise measurable insights.
+- Format responses clearly. Use numbered lists or sections when helpful.
+- All prices should be in INR (₹).
 `;
 
     const stream = await streamGeminiResponse(prompt);

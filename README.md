@@ -9,6 +9,7 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 - Email/password and Google OAuth authentication with email verification
 - Dashboard with portfolio overview and performance metrics
 - Real-time portfolio tracking with P&L calculations
+- Redis caching for optimized API performance
 - Holdings management with detailed position tracking
 - User watchlist management (add/remove/view stocks)
 - Order creation and retrieval powered by a custom service
@@ -31,9 +32,10 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 | Database | MongoDB (via Mongoose) |
 | Authentication | NextAuth.js (Credentials + Google OAuth) |
 | Styling | Tailwind CSS + Shadcn UI |
-| Charts | Recharts |
+| Charts | Recharts + Lightweight Charts |
 | Email | Resend (for verification emails) |
 | AI | Google Gemini 2.5 Flash |
+| Caching | Redis |
 | External API | Upstox broker API |
 
 ---
@@ -67,6 +69,10 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
    RESEND_API_KEY=your-resend-api-key
    UPSTOX_API_KEY=your-upstox-api-key
    UPSTOX_API_SECRET=your-upstox-api-secret
+   UPSTOX_ACCESS_TOKEN=your-upstox-access-token
+   REDIS_HOST=your-redis-host
+   REDIS_PORT=your-redis-port
+   REDIS_PASSWORD=your-redis-password
    ```
 
 3. **Run in development**
@@ -141,9 +147,10 @@ This project currently does not include automated tests.  You can add Jest/Playw
 ## 📦 Deployment
 
 - Deploy on Vercel with the same environment variables.
-- Ensure your MongoDB instance is reachable from Vercel.
+- Ensure your MongoDB and Redis instances are reachable from Vercel.
 - Configure Google OAuth credentials for production domain.
 - Add production URL to NEXTAUTH_URL environment variable.
+- Set up Redis for caching (Redis Cloud, Upstash, or self-hosted).
 
 ---
 

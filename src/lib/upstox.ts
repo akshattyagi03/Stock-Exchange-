@@ -1,38 +1,95 @@
-const UPSTOX_BASE_URL = "https://api.upstox.com/v2";
+import axios from "axios"
 
-export async function fetchMarketQuote(symbol: string, accessToken: string) {
-  const response = await fetch(
-    `${UPSTOX_BASE_URL}/market-quote/ltp?symbol=${symbol}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+const UPSTOX_BASE_URL = "https://api.upstox.com/v2"
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch market quote");
+/* ---------------- CREATE HEADERS ---------------- */
+
+function getHeaders(accessToken: string) {
+  return {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "application/json",
   }
-
-  return response.json();
 }
 
-export async function placeOrder(orderData: any, accessToken: string) {
-  const response = await fetch(
-    `${UPSTOX_BASE_URL}/order/place`,
+/* ---------------- GET LTP ---------------- */
+
+export async function fetchMarketQuote(symbol: string, accessToken: string) {
+  const res = await axios.get(
+    `${UPSTOX_BASE_URL}/market-quote/ltp`,
     {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+      params: {
+        symbol: symbol,
       },
-      body: JSON.stringify(orderData),
+      headers: getHeaders(accessToken),
     }
-  );
+  )
 
-  if (!response.ok) {
-    throw new Error("Order placement failed");
-  }
+  return res.data
+}
 
-  return response.json();
+/* ---------------- GET FULL QUOTE ---------------- */
+
+export async function getStockQuote(
+  instrumentKey: string,
+  accessToken: string
+) {
+  const res = await axios.get(
+    `${UPSTOX_BASE_URL}/market-quote/quotes`,
+    {
+      params: {
+        instrument_key: instrumentKey,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    }
+  )
+
+  console.log("UPSTOX RESPONSE:", res.data)
+
+  const data = res.data?.data
+
+  if (!data) return null
+
+  const firstKey = Object.keys(data)[0]
+
+  return data[firstKey]
+}
+
+export async function getMarketDepth(
+  instrumentKey: string,
+  accessToken: string
+) {
+  const res = await axios.get(
+    `${UPSTOX_BASE_URL}/market-quote/market-depth`,
+    {
+      params: {
+        instrument_key: instrumentKey,
+      },
+      headers: getHeaders(accessToken),
+    }
+  )
+
+  return res.data.data[instrumentKey]
+}
+
+export async function getIndexPrice(instrumentKey: string, token: string) {
+  const res = await axios.get(`${UPSTOX_BASE_URL}/market-quote/ltp`, {
+    params: {
+      instrument_key: instrumentKey
+    },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    }
+  })
+
+  const data = res.data?.data
+
+  if (!data) return null
+
+  const firstKey = Object.keys(data)[0]
+
+  return data[firstKey]
 }
