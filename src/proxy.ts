@@ -29,7 +29,8 @@ export async function proxy(request: NextRequest) {
     url.pathname.startsWith("/funds") ||
     url.pathname.startsWith("/settings") ||
     url.pathname.startsWith("/billing") ||
-    url.pathname.startsWith("/quick-create")
+    url.pathname.startsWith("/quick-create") ||
+    url.pathname.startsWith("/markets")
   )) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
@@ -42,15 +43,27 @@ export const config = {
     "/sign-in",
     "/sign-up",
     "/verify/:path*",
+    "/dashboard",
     "/dashboard/:path*",
+    "/holdings",
     "/holdings/:path*",
+    "/orders",
     "/orders/:path*",
+    "/watchlist",
     "/watchlist/:path*",
+    "/analytics",
     "/analytics/:path*",
+    "/ai-advisor",
     "/ai-advisor/:path*",
+    "/funds",
     "/funds/:path*",
+    "/settings",
     "/settings/:path*",
+    "/billing",
     "/billing/:path*",
+    "/quick-create",
     "/quick-create/:path*",
+    "/markets",
+    "/markets/:path*",
   ],
 };
