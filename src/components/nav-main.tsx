@@ -1,7 +1,6 @@
 "use client"
 
-import { IconCirclePlusFilled, IconMail, type Icon } from "@tabler/icons-react"
-import { Button } from "@/components/ui/button"
+import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -26,21 +25,14 @@ export function NavMain({
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
               tooltip="Quick Create"
+              asChild
               className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
             >
-              <IconCirclePlusFilled />
-              <Link href="/create-order">
-              <span>Quick Create</span>
+              <Link href="/quick-create" className="flex items-center gap-2">
+                <IconCirclePlusFilled />
+                <span>Quick Create</span>
               </Link>
             </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="size-8 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <IconMail />
-              <span className="sr-only">Inbox</span>
-            </Button>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>

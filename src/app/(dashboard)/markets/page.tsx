@@ -1,60 +1,105 @@
 "use client"
-import Link from "next/link"
-import { Loader2, TrendingUp, TrendingDown, Activity } from "lucide-react"
-import { useEffect, useState } from "react"
-import { Badge } from "@/components/ui/badge"
+
+import { useEffect, useState, useRef } from "react"
+import { TrendingUp, TrendingDown, Activity, Loader2, Plus, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+
+interface Instrument {
+    trading_symbol: string
+    name: string
+    instrument_key: string
+}
 
 interface Stock {
+    instrumentKey: string
     symbol: string
     name: string
     price: number
     change: number
+    changeValue: number
 }
 
-interface Index {
-    symbol: string
+interface MarketIndex {
     name: string
-    value: number
+    value?: number
     change: number
     points: number
 }
 
-export default function MarketsPage() {
+export default function Markets() {
     const [stocks, setStocks] = useState<Stock[]>([])
-    const [indices, setIndices] = useState<Index[]>([])
     const [loading, setLoading] = useState(true)
+    const [source, setSource] = useState<string>("")
+    const [indices, setIndices] = useState<MarketIndex[]>([])
 
+    const [searchQuery, setSearchQuery] = useState("")
+    const [searchResults, setSearchResults] = useState<Instrument[]>([])
+    const [showDropdown, setShowDropdown] = useState(false)
+
+    const searchRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
+
+    // 🔍 Search
     useEffect(() => {
-        const fetchMarketData = async () => {
+        if (!searchQuery.trim()) {
+            return
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+                const data = await res.json()
+                setSearchResults(data.results || [])
+                setShowDropdown(true)
+            } catch {
+                setSearchResults([])
+            }
+        }, 250)
+
+        return () => clearTimeout(timeout)
+    }, [searchQuery])
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setShowDropdown(false)
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
+
+    // 📊 Fetch Markets + Indices
+    useEffect(() => {
+        const load = async () => {
             try {
                 const [stocksRes, indicesRes] = await Promise.all([
                     fetch("/api/markets"),
                     fetch("/api/indices"),
                 ])
 
-                if (!stocksRes.ok || !indicesRes.ok) {
-                    console.error("API request failed")
-                    return
-                }
-
                 const stocksData = await stocksRes.json()
                 const indicesData = await indicesRes.json()
 
-                setStocks(stocksData.stocks ?? [])
-                setIndices(indicesData.indices ?? [])
-
+                setStocks(stocksData.stocks || [])
+                setIndices(indicesData.indices || [])
+                setSource(stocksData.source)
                 setLoading(false)
-            } catch (error) {
-                console.error("Fetch error:", error)
+            } catch (err) {
+                console.error("Fetch error:", err)
+                setLoading(false)
             }
         }
 
-        fetchMarketData()
-
-        const interval = setInterval(fetchMarketData, 10000)
+        load()
+        const interval = setInterval(load, 5000)
 
         return () => clearInterval(interval)
     }, [])
@@ -63,128 +108,200 @@ export default function MarketsPage() {
     const losers = stocks.filter(s => s.change < 0)
 
     return (
-        <div className="min-h-screen bg-background p-6 space-y-6">
+        <div className="min-h-screen bg-background">
 
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Markets</h1>
-                    <p className="text-muted-foreground text-sm mt-1">NSE & BSE · Live prices</p>
-                </div>
-                <Badge variant="outline" className="gap-1.5 text-xs">
-                    <span className="size-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                    Live
-                </Badge>
-            </div>
+            <div className="border-b bg-card/50 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
 
-            {/* Index Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {indices.map((index) => (
-                    <Card key={index.symbol} className="border-border/60">
-                        <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{index.name}</p>
-                            <p className="text-xl font-bold mt-1 tabular-nums">
-                                {index.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                            </p>
-                            <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${index.change >= 0 ? "text-green-500" : "text-red-500"}`}>
-                                {index.change >= 0
-                                    ? <TrendingUp className="size-3.5" />
-                                    : <TrendingDown className="size-3.5" />}
-                                <span>{index.change > 0 ? "+" : ""}{index.change.toFixed(2)}%</span>
-                                <span className="text-muted-foreground font-normal text-xs">
-                                    ({index.points > 0 ? "+" : ""}{index.points.toFixed(2)})
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                    {/* Left */}
+                    <div className="shrink-0">
+                        <h1 className="text-2xl font-bold">Markets</h1>
+                        <p className="text-sm text-muted-foreground">Live market data</p>
+                    </div>
 
-            {/* Stocks Table */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Activity className="size-4" />
-                            Stocks
-                        </CardTitle>
-                        {!loading && (
-                            <div className="flex gap-3 text-xs text-muted-foreground">
-                                <span className="text-green-500 font-medium">▲ {gainers.length} gaining</span>
-                                <span className="text-red-500 font-medium">▼ {losers.length} falling</span>
+                    {/* Search */}
+                    <div className="relative w-full max-w-md mx-4" ref={searchRef}>
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => {
+                                const value = e.target.value
+                                setSearchQuery(value)
+                                if (!value.trim()) {
+                                    setSearchResults([])
+                                    setShowDropdown(false)
+                                    return
+                                }
+                                setShowDropdown(true)
+                            }}
+                            onFocus={() => setShowDropdown(true)}
+                            placeholder="Search stocks by name or symbol..."
+                            className="w-full pl-11 pr-4 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+
+                        {showDropdown && searchResults.length > 0 && (
+                            <div className="absolute top-full mt-1 w-full bg-card border rounded-lg shadow-lg z-100 max-h-72 overflow-y-auto">
+                                {searchResults.map((item) => (
+                                    <div
+                                        key={item.instrument_key}
+                                        className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
+                                        onClick={() => {
+                                            setShowDropdown(false)
+                                            setSearchQuery("")
+                                            router.push(`/markets/${item.trading_symbol}?key=${item.instrument_key}`)
+                                        }}
+                                    >
+                                        <div>
+                                            <p className="text-sm font-semibold">{item.trading_symbol}</p>
+                                            <p className="text-xs text-muted-foreground">{item.name}</p>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">NSE</span>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
-                </CardHeader>
-                <Separator />
 
-                <Tabs defaultValue="all">
-                    <div className="px-6 pt-3">
-                        <TabsList className="h-8">
-                            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-                            <TabsTrigger value="gainers" className="text-xs">Gainers</TabsTrigger>
-                            <TabsTrigger value="losers" className="text-xs">Losers</TabsTrigger>
-                        </TabsList>
+                    {/* Right */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        {source && (
+                            <span className="text-xs text-yellow-400">
+                                {source === "cache" ? "Cached" : source === "stale-cache" ? "Stale" : "Live"}
+                            </span>
+                        )}
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/30">
+                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-1" />
+                            Live
+                        </Badge>
                     </div>
+                </div>
+            </div>
 
-                    {loading ? (
-                        <CardContent className="flex items-center justify-center py-16 text-muted-foreground gap-2">
-                            <Loader2 className="size-4 animate-spin" />
-                            <span className="text-sm">Fetching live prices…</span>
+            {/* Indices */}
+            <div className="max-w-7xl mx-auto px-4 pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {indices.map((index) => (
+                        <div key={index.name} className="p-4 rounded-xl border bg-card hover:bg-muted/20 transition">
+                            <p className="text-xs text-muted-foreground">{index.name}</p>
+                            <p className="text-lg font-bold mt-1">{index.value?.toLocaleString("en-IN")}</p>
+                            <p className={`text-sm font-semibold mt-1 ${index.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {index.change >= 0 ? "+" : ""}{index.change}% ({index.points})
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Main */}
+            <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Stocks */}
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader className="flex justify-between items-center">
+                            <CardTitle className="flex items-center gap-2">
+                                <Activity size={18} /> All Stocks
+                            </CardTitle>
+                            <div className="text-xs">
+                                <span className="text-green-400 mr-2">▲ {gainers.length}</span>
+                                <span className="text-red-400">▼ {losers.length}</span>
+                            </div>
+                        </CardHeader>
+
+                        <Tabs defaultValue="all">
+                            <TabsList className="ml-4">
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="gainers">Gainers</TabsTrigger>
+                                <TabsTrigger value="losers">Losers</TabsTrigger>
+                            </TabsList>
+
+                            {loading ? (
+                                <div className="flex justify-center items-center py-16 text-muted-foreground">
+                                    <Loader2 className="animate-spin mr-2" /> Loading...
+                                </div>
+                            ) : (
+                                ["all", "gainers", "losers"].map(tab => {
+                                    const filtered = tab === "all" ? stocks : tab === "gainers" ? gainers : losers
+
+                                    return (
+                                        <TabsContent key={tab} value={tab}>
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b">
+                                                        <th className="text-left p-3">Symbol</th>
+                                                        <th className="text-left">Name</th>
+                                                        <th className="text-right">Price</th>
+                                                        <th className="text-right">Change</th>
+                                                        <th className="text-center">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filtered.map(stock => (
+                                                        <tr key={stock.instrumentKey} className="border-b hover:bg-muted/20">
+                                                            <td className="p-3 font-semibold">
+                                                                <Link href={`/markets/${stock.symbol}?key=${stock.instrumentKey}`}>
+                                                                    <span className="cursor-pointer hover:text-blue-400 hover:underline">
+                                                                        {stock.symbol}
+                                                                    </span>
+                                                                </Link>
+                                                            </td>
+                                                            <td>{stock.name}</td>
+                                                            <td className="text-right font-mono">₹{stock.price.toLocaleString()}</td>
+                                                            <td className={`text-right ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                                                {stock.change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                                {stock.change.toFixed(2)}%
+                                                            </td>
+                                                            <td className="text-center">
+                                                                <Button asChild size="sm" variant="outline">
+                                                                    <Link href={`/markets/${stock.symbol}?key=${stock.instrumentKey}`}>
+                                                                        Trade
+                                                                    </Link>
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+
+                                            {filtered.length === 0 && (
+                                                <p className="text-center py-10 text-muted-foreground">No data</p>
+                                            )}
+                                        </TabsContent>
+                                    )
+                                })
+                            )}
+                        </Tabs>
+                    </Card>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Market Insight</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground">
+                                Markets are showing bullish momentum led by IT and banking stocks.
+                            </p>
                         </CardContent>
-                    ) : (
-                        <>
-                            {(["all", "gainers", "losers"] as const).map((tab) => {
-                                const filtered = tab === "all" ? stocks : tab === "gainers" ? gainers : losers
-                                return (
-                                    <TabsContent key={tab} value={tab} className="mt-0">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="border-b bg-muted/40">
-                                                    <th className="text-left px-6 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Symbol</th>
-                                                    <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</th>
-                                                    <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
-                                                    <th className="text-right px-6 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Change</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filtered.map((stock) => (
-                                                    <tr key={stock.symbol} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                                                        <td className="px-6 py-3.5 font-semibold">
-                                                            <Link href={`/markets/${stock.symbol}`} className="hover:underline underline-offset-4">
-                                                                {stock.symbol}
-                                                            </Link>
-                                                        </td>
-                                                        <td className="px-4 py-3.5 text-muted-foreground">{stock.name}</td>
-                                                        <td className="px-4 py-3.5 text-right font-mono tabular-nums">
-                                                            ₹{stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                        <td className="px-6 py-3.5 text-right">
-                                                            <span className={`inline-flex items-center gap-1 font-medium tabular-nums ${stock.change >= 0 ? "text-green-500" : "text-red-500"}`}>
-                                                                {stock.change >= 0
-                                                                    ? <TrendingUp className="size-3.5" />
-                                                                    : <TrendingDown className="size-3.5" />}
-                                                                {stock.change > 0 ? "+" : ""}{stock.change.toFixed(2)}%
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {filtered.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={4} className="px-6 py-10 text-center text-muted-foreground text-sm">
-                                                            No stocks in this category
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </TabsContent>
-                                )
-                            })}
-                        </>
-                    )}
-                </Tabs>
-            </Card>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex justify-between">
+                            <CardTitle>Watchlist</CardTitle>
+                            <Plus size={16} />
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground">Coming soon...</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     )
 }
+

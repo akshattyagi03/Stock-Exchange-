@@ -116,17 +116,17 @@ export default function Page() {
         },
         {
             accessorKey: "availableQuantity",
-            header: "Available Quantity",
+            header: () => <div className="text-right">Available Quantity</div>,
             cell: ({ row }) => <div className="text-right">{row.getValue("availableQuantity")}</div>,
         },
         {
             accessorKey: "frozenQuantity",
-            header: "Frozen Quantity",
+            header: () => <div className="text-right">Frozen Quantity</div>,
             cell: ({ row }) => <div className="text-right">{row.getValue("frozenQuantity")}</div>,
         },
         {
             accessorKey: "averageBuyPrice",
-            header: "Average Buy Price",
+            header: () => <div className="text-right">Average Buy Price</div>,
             cell: ({ row }) => {
                 const price = row.getValue("averageBuyPrice") as number
                 return <div className="text-right">₹{price.toFixed(2)}</div>

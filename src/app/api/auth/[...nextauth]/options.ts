@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/models/User";
 import GoogleProvider from "next-auth/providers/google";
+import { generateUsername } from "@/utils/usernameGenerator";
 export const AuthOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -57,13 +58,12 @@ export const AuthOptions: NextAuthOptions = {
 
                 if (!existingUser) {
                     await UserModel.create({
+                        name: user.name,
                         email: user.email,
-                        username: user.name,
+                        username: generateUsername(),
                         image: user.image,
                         authProvider: "google",
                         isVerified: true,
-                        walletBalance: 0,
-                        holdings: [],
                     });
                 }
             }
@@ -72,20 +72,15 @@ export const AuthOptions: NextAuthOptions = {
         },
 
         async jwt({ token, user }) {
-
-            await dbConnect();
             if (user?.email) {
-                const dbUser = await UserModel.findOne({
-                    email: user.email,
-                });
-
+                await dbConnect();
+                const dbUser = await UserModel.findOne({ email: user.email });
                 if (dbUser) {
                     token._id = dbUser._id.toString();
                     token.isVerified = dbUser.isVerified;
                     token.username = dbUser.username;
                 }
             }
-
             return token;
         },
 

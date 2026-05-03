@@ -30,7 +30,7 @@ const defaultNavItems: NavItem[] = [
 
 const HeroSection = ({
   heading = "Trade Smarter with Real-Time Market Insights",
-  tagline = "Buy and sell stocks instantly, track your portfolio, and analyze market trends.",
+  tagline = "Buy and sell stocks instantly, track your portfolio, and analyze market trends — powered by TradeX.",
   buttonText = "Start Trading",
   imageUrl,
   videoUrl,
@@ -176,6 +176,8 @@ const HeroSection = ({
 
       {/* NAVBAR */}
       <nav className="w-full max-w-6xl mx-auto flex justify-between items-center px-6 py-5 text-sm">
+        <span className="text-white font-bold text-lg tracking-tight">TradeX</span>
+        <div className="flex items-center gap-6">
         {navItems.map((item) =>
           item.href ? (
             <a
@@ -195,6 +197,7 @@ const HeroSection = ({
             </button>
           )
         )}
+        </div>
       </nav>
 
       {/* HERO */}

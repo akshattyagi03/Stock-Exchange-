@@ -20,8 +20,20 @@ interface Summary {
   todaysPnL: number
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value)
+
 export function SectionCards() {
-  const [summary, setSummary] = useState<Summary | null>(null)
+  const [summary, setSummary] = useState<Summary>({
+    totalPortfolioValue: 0,
+    totalInvested: 0,
+    overallPnL: 0,
+    todaysPnL: 0,
+  })
 
   const fetchSummary = async () => {
     if (document.visibilityState !== "visible") return
@@ -29,7 +41,12 @@ export function SectionCards() {
     try {
       const res = await fetch("/api/portfolio-summary")
       const data = await res.json()
-      setSummary(data)
+      setSummary({
+        totalPortfolioValue: data.totalPortfolioValue ?? 0,
+        totalInvested: data.totalInvested ?? 0,
+        overallPnL: data.overallPnL ?? 0,
+        todaysPnL: data.todaysPnL ?? 0,
+      })
     } catch (error) {
       console.error("Failed to fetch summary:", error)
     }
@@ -65,8 +82,6 @@ export function SectionCards() {
     }
   }, [])
 
-  if (!summary) return null
-
   const overallPercentage =
     summary.totalInvested > 0
       ? (summary.overallPnL / summary.totalInvested) * 100
@@ -78,7 +93,7 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Total Portfolio Value</CardDescription>
           <CardTitle className="text-2xl font-semibold">
-            ₹{summary.totalPortfolioValue.toFixed(2)}
+            {formatCurrency(summary.totalPortfolioValue)}
           </CardTitle>
         </CardHeader>
         <CardFooter className="text-muted-foreground text-sm">
@@ -87,12 +102,13 @@ export function SectionCards() {
       </Card>
       <Card>
         <CardHeader>
-          <CardDescription>Today's P&L</CardDescription>
+          <CardDescription>Today&apos;s P&L</CardDescription>
           <CardTitle
-            className={`text-2xl font-semibold ${summary.todaysPnL >= 0 ? "text-green-600" : "text-red-600"
-              }`}
+            className={`text-2xl font-semibold ${
+              summary.todaysPnL >= 0 ? "text-green-600" : "text-red-600"
+            }`}
           >
-            ₹{summary.todaysPnL.toFixed(2)}
+            {formatCurrency(summary.todaysPnL)}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -104,30 +120,27 @@ export function SectionCards() {
             </Badge>
           </CardAction>
         </CardHeader>
-        <CardFooter className="text-sm">
-          Updates every 15 seconds
-        </CardFooter>
+        <CardFooter className="text-sm">Updates every 15 seconds</CardFooter>
       </Card>
       <Card>
         <CardHeader>
           <CardDescription>Overall P&L</CardDescription>
           <CardTitle
-            className={`text-2xl font-semibold ${summary.overallPnL >= 0 ? "text-green-600" : "text-red-600"
-              }`}
+            className={`text-2xl font-semibold ${
+              summary.overallPnL >= 0 ? "text-green-600" : "text-red-600"
+            }`}
           >
-            ₹{summary.overallPnL.toFixed(2)} (
-            {overallPercentage.toFixed(2)}%)
+            {formatCurrency(summary.overallPnL)} ({overallPercentage.toFixed(2)}
+            %)
           </CardTitle>
         </CardHeader>
-        <CardFooter className="text-sm">
-          Since investment started
-        </CardFooter>
+        <CardFooter className="text-sm">Since investment started</CardFooter>
       </Card>
       <Card>
         <CardHeader>
           <CardDescription>Total Invested</CardDescription>
           <CardTitle className="text-2xl font-semibold">
-            ₹{summary.totalInvested.toFixed(2)}
+            {formatCurrency(summary.totalInvested)}
           </CardTitle>
         </CardHeader>
         <CardFooter className="text-muted-foreground text-sm">

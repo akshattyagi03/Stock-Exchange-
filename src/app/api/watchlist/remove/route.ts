@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { AuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import dbConnect from "@/lib/dbConnect";
-import UserModel from "@/models/User";
+import { Watchlist } from "@/models/Watchlist";
 
 export async function DELETE(req: NextRequest) {
   await dbConnect();
 
-  const { userId, instrumentKey } = await req.json();
+  const session = await getServerSession(AuthOptions);
+  if (!session?.user?._id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const userId = session.user._id;
 
-  if (!userId || !instrumentKey) {
+  const { watchlistId, instrumentKey } = await req.json();
+
+  if (!instrumentKey) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 }
@@ -15,24 +23,29 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const user = await UserModel.findById(userId);
+    let targetWatchlist;
+    if (watchlistId) {
+      targetWatchlist = await Watchlist.findOne({ _id: watchlistId, userId });
+    } else {
+      targetWatchlist = await Watchlist.findOne({ userId });
+    }
 
-    if (!user) {
+    if (!targetWatchlist) {
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "Watchlist not found" },
         { status: 404 }
       );
     }
 
-    user.watchlist = user.watchlist.filter(
+    targetWatchlist.stocks = targetWatchlist.stocks.filter(
       (item: any) => item.instrumentKey !== instrumentKey
     );
 
-    await user.save();
+    await targetWatchlist.save();
 
     return NextResponse.json({
       message: "Removed from watchlist",
-      watchlist: user.watchlist,
+      watchlist: targetWatchlist,
     });
   } catch (error) {
     console.error("Remove Watchlist Error:", error);

@@ -5,100 +5,85 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
-interface Holding {
+export interface AnalyticsHolding {
   symbol: string
   name: string
   category: string
-  units: number
-  avgPrice: number
+  quantity: number
+  averageBuyPrice: number
   currentPrice: number
   invested: number
-  current: number
+  currentValue: number
+  overallPnL: number
 }
 
-const holdings: Holding[] = [
-  {
-    symbol: "HDFCBANK",
-    name: "HDFC Bank Ltd",
-    category: "Equity",
-    units: 12.5,
-    avgPrice: 1680,
-    currentPrice: 1622,
-    invested: 21000,
-    current: 20275,
-  },
-  {
-    symbol: "INFY",
-    name: "Infosys Ltd",
-    category: "Equity",
-    units: 5.8,
-    avgPrice: 1520,
-    currentPrice: 1489,
-    invested: 8816,
-    current: 8636.2,
-  },
-  {
-    symbol: "NIFTYBEES",
-    name: "Nippon India ETF Nifty BeES",
-    category: "Others",
-    units: 30,
-    avgPrice: 207,
-    currentPrice: 214.5,
-    invested: 6210,
-    current: 6435,
-  },
-]
+const formatCurrency = (value: number, maximumFractionDigits = 0) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits,
+  }).format(value)
 
-function HoldingRow({ h }: { h: Holding }) {
+function HoldingRow({ h }: { h: AnalyticsHolding }) {
   const [open, setOpen] = useState(false)
-  const pnl = h.current - h.invested
-  const pnlPct = ((pnl / h.invested) * 100).toFixed(2)
-  const isProfit = pnl >= 0
+  const pnlPct =
+    h.invested > 0 ? ((h.overallPnL / h.invested) * 100).toFixed(2) : "0.00"
+  const isProfit = h.overallPnL >= 0
 
   return (
-    <div className="border border-white/[0.07] rounded-xl overflow-hidden">
+    <div className="overflow-hidden rounded-xl border bg-card">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-white/3 transition-colors text-left"
+        className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
       >
-        <div className="size-9 rounded-lg bg-white/6 flex items-center justify-center shrink-0">
-          <span className="text-xs font-bold text-white/70">{h.symbol.slice(0, 2)}</span>
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/50">
+          <span className="text-xs font-bold text-foreground/70">
+            {h.symbol.slice(0, 2)}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{h.symbol}</p>
-          <p className="text-xs text-white/40 truncate">{h.name}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{h.symbol}</p>
+          <p className="truncate text-xs text-muted-foreground">{h.name}</p>
         </div>
         <Badge
           variant="outline"
-          className="text-[10px] border-white/10 text-white/40 hidden sm:inline-flex"
+          className="hidden border-border/40 text-[10px] text-muted-foreground sm:inline-flex"
         >
           {h.category}
         </Badge>
-        <div className="text-right shrink-0">
-          <p className="text-sm font-semibold">₹{h.current.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</p>
-          <p className={`text-xs font-medium ${isProfit ? "text-emerald-400" : "text-red-400"}`}>
-            {isProfit ? "+" : ""}₹{Math.abs(pnl).toLocaleString("en-IN", { maximumFractionDigits: 0 })} ({isProfit ? "+" : ""}{pnlPct}%)
+        <div className="shrink-0 text-right">
+          <p className="text-sm font-semibold">
+            {formatCurrency(h.currentValue)}
+          </p>
+          <p
+            className={`text-xs font-medium ${
+              isProfit ? "text-emerald-400" : "text-red-400"
+            }`}
+          >
+            {isProfit ? "+" : ""}
+            {formatCurrency(Math.abs(h.overallPnL))} ({isProfit ? "+" : ""}
+            {pnlPct}%)
           </p>
         </div>
         {open ? (
-          <ChevronUp className="size-4 text-white/30 shrink-0" />
+          <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
         ) : (
-          <ChevronDown className="size-4 text-white/30 shrink-0" />
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         )}
       </button>
 
       {open && (
         <>
-          <Separator className="bg-white/6" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white/5">
+          <Separator />
+          <div className="grid grid-cols-2 gap-px bg-border/50 sm:grid-cols-4">
             {[
-              { label: "Units", value: h.units.toFixed(2) },
-              { label: "Avg. Price", value: `₹${h.avgPrice.toLocaleString("en-IN")}` },
-              { label: "Current Price", value: `₹${h.currentPrice.toLocaleString("en-IN")}` },
-              { label: "Invested", value: `₹${h.invested.toLocaleString("en-IN")}` },
+              { label: "Units", value: h.quantity.toFixed(2) },
+              { label: "Avg. Price", value: formatCurrency(h.averageBuyPrice, 2) },
+              { label: "Current Price", value: formatCurrency(h.currentPrice, 2) },
+              { label: "Invested", value: formatCurrency(h.invested) },
             ].map((item) => (
-              <div key={item.label} className="bg-[#0d1117] px-4 py-3">
-                <p className="text-xs text-white/40 mb-1">{item.label}</p>
+              <div key={item.label} className="bg-card px-4 py-3">
+                <p className="mb-1 text-xs text-muted-foreground">{item.label}</p>
                 <p className="text-sm font-semibold">{item.value}</p>
               </div>
             ))}
@@ -109,17 +94,27 @@ function HoldingRow({ h }: { h: Holding }) {
   )
 }
 
-export default function HoldingsList() {
+export default function HoldingsList({
+  holdings,
+}: {
+  holdings: AnalyticsHolding[]
+}) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Holdings</h2>
-        <span className="text-xs text-white/40">{holdings.length} stocks</span>
+        <span className="text-xs text-muted-foreground">
+          {holdings.length} stock{holdings.length !== 1 ? "s" : ""}
+        </span>
       </div>
       <div className="space-y-2">
-        {holdings.map((h) => (
-          <HoldingRow key={h.symbol} h={h} />
-        ))}
+        {holdings.length > 0 ? (
+          holdings.map((h) => <HoldingRow key={h.symbol} h={h} />)
+        ) : (
+          <div className="rounded-xl border border-border px-4 py-6 text-center text-sm text-muted-foreground">
+            No holdings found.
+          </div>
+        )}
       </div>
     </div>
   )

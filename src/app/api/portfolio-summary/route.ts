@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
+
 import { AuthOptions } from "@/app/api/auth/[...nextauth]/options"
-import OrderModel from "@/models/Orders"
 import dbConnect from "@/lib/dbConnect"
-import { redis, connectRedis } from "@/lib/redis"
+import { getCurrentStockQuote } from "@/lib/stock-quotes"
+import HoldingModel from "@/models/Holdings"
 
 export async function GET() {
   try {
     await dbConnect()
-    await connectRedis()
 
     const session = await getServerSession(AuthOptions)
 
@@ -16,62 +16,47 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const userId = session.user._id
-
-    const orders = await OrderModel.find({
-      user: userId,
-      status: "executed",
-    })
-
-    const holdingsMap: Record<
-      string,
-      { quantity: number; totalCost: number }
-    > = {}
-
-    for (const order of orders) {
-      if (!holdingsMap[order.stockName]) {
-        holdingsMap[order.stockName] = {
-          quantity: 0,
-          totalCost: 0,
-        }
-      }
-
-      if (order.orderType === "buy") {
-        holdingsMap[order.stockName].quantity += order.executedQuantity
-        holdingsMap[order.stockName].totalCost +=
-          order.executedPrice! * order.executedQuantity
-      }
-
-      if (order.orderType === "sell") {
-        holdingsMap[order.stockName].quantity -= order.executedQuantity
-      }
-    }
+    const holdings = await HoldingModel.find({
+      user: session.user._id,
+    }).lean()
 
     let totalPortfolioValue = 0
     let totalInvested = 0
     let overallPnL = 0
     let todaysPnL = 0
+    const allocation = []
 
-    for (const stock in holdingsMap) {
-      const { quantity, totalCost } = holdingsMap[stock]
+    for (const holding of holdings) {
+      const symbol = holding.stockName.toUpperCase()
+      const quantity =
+        (holding.availableQuantity ?? 0) + (holding.frozenQuantity ?? 0)
 
       if (quantity <= 0) continue
 
-      const cached = await redis.get(`stock:${stock}`)
-      if (!cached) continue
-
-      const { lastPrice, prevClose } = JSON.parse(cached)
-
-      const averagePrice = totalCost / quantity
-      const currentValue = lastPrice * quantity
-      const invested = averagePrice * quantity
-      const stockOverallPnL = currentValue - invested
-      const stockTodayPnL = (lastPrice - prevClose) * quantity
+      const averageBuyPrice = holding.averageBuyPrice ?? 0
+      const quote = await getCurrentStockQuote(symbol)
+      const currentPrice = quote?.price ?? averageBuyPrice
+      const previousClose = quote?.previousClose ?? currentPrice
+      const invested = averageBuyPrice * quantity
+      const currentValue = currentPrice * quantity
+      const holdingOverallPnL = currentValue - invested
+      const holdingTodaysPnL = (currentPrice - previousClose) * quantity
 
       totalPortfolioValue += currentValue
       totalInvested += invested
-      overallPnL += stockOverallPnL
-      todaysPnL += stockTodayPnL
+      overallPnL += holdingOverallPnL
+      todaysPnL += holdingTodaysPnL
+
+      allocation.push({
+        symbol,
+        quantity,
+        averageBuyPrice,
+        currentPrice,
+        invested,
+        currentValue,
+        overallPnL: holdingOverallPnL,
+        todaysPnL: holdingTodaysPnL,
+      })
     }
 
     return NextResponse.json({
@@ -79,6 +64,7 @@ export async function GET() {
       totalInvested,
       overallPnL,
       todaysPnL,
+      allocation,
     })
   } catch (error) {
     console.error(error)

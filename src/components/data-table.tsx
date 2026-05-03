@@ -38,49 +38,45 @@ import {
 
 export type Holding = {
   _id: string
-  symbol: string
-  quantity: number
-  avgPrice: number
+  stockName: string
+  availableQuantity: number
+  frozenQuantity: number
+  averageBuyPrice: number
 }
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value)
 
 const columns: ColumnDef<Holding>[] = [
   {
-    accessorKey: "symbol",
+    accessorKey: "stockName",
     header: "Symbol",
   },
   {
-    accessorKey: "quantity",
-    header: "Quantity",
+    accessorKey: "availableQuantity",
+    header: "Available",
   },
   {
-    accessorKey: "avgPrice",
+    accessorKey: "frozenQuantity",
+    header: "Frozen",
+  },
+  {
+    accessorKey: "averageBuyPrice",
     header: "Average Price",
-    cell: ({ row }) => `₹${row.original.avgPrice.toFixed(2)}`,
+    cell: ({ row }) => formatCurrency(row.original.averageBuyPrice ?? 0),
   },
   {
-    id: "marketValue",
-    header: "Market Value",
+    id: "investedValue",
+    header: "Invested Value",
     cell: ({ row }) => {
-      const value =
-        row.original.quantity * row.original.avgPrice
-      return `₹${value.toFixed(2)}`
-    },
-  },
-  {
-    id: "pnl",
-    header: "P&L",
-    cell: ({ row }) => {
-      // Temporary logic (replace with live price later)
-      const currentPrice = row.original.avgPrice * 1.05
-      const pnl =
-        (currentPrice - row.original.avgPrice) *
-        row.original.quantity
-
-      return (
-        <span className={pnl >= 0 ? "text-green-500" : "text-red-500"}>
-          ₹{pnl.toFixed(2)}
-        </span>
-      )
+      const quantity =
+        (row.original.availableQuantity ?? 0) + (row.original.frozenQuantity ?? 0)
+      const value = quantity * (row.original.averageBuyPrice ?? 0)
+      return formatCurrency(value)
     },
   },
 ]
@@ -114,8 +110,7 @@ export function DataTable({
     getPaginationRowModel: getPaginationRowModel(),
   })
   return (
-    <div className="space-y-4">
-      {/* Top Controls */}
+    <div className="space-y-4 px-4 lg:px-6">
       <div className="flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -143,9 +138,7 @@ export function DataTable({
 
         <Select
           value={`${table.getState().pagination.pageSize}`}
-          onValueChange={(value) =>
-            table.setPageSize(Number(value))
-          }
+          onValueChange={(value) => table.setPageSize(Number(value))}
         >
           <SelectTrigger size="sm" className="w-24">
             <SelectValue />
@@ -160,7 +153,6 @@ export function DataTable({
         </Select>
       </div>
 
-      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -195,7 +187,7 @@ export function DataTable({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="text-center py-6"
+                  className="py-6 text-center"
                 >
                   No holdings found.
                 </TableCell>
@@ -205,7 +197,6 @@ export function DataTable({
         </Table>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-sm">
         <div>
           Page {table.getState().pagination.pageIndex + 1} of{" "}

@@ -2,9 +2,29 @@
 
 import { createChart, ColorType, CandlestickSeries, HistogramSeries, IChartApi, ISeriesApi } from "lightweight-charts"
 import { useEffect, useRef, useState } from "react"
+import { useTheme } from "next-themes"
 
 interface Props {
   symbol: string
+}
+
+const FALLBACK_RANGES: Record<string, string[]> = {
+  "1W": ["1M", "1Y"],
+  "1M": ["1Y"],
+  "1Y": [],
+}
+
+async function fetchWithDayFallback(symbol: string): Promise<any[]> {
+  const today = new Date()
+  for (let i = 0; i < 10; i++) {
+    const date = new Date(today)
+    date.setDate(today.getDate() - i)
+    const dateStr = date.toISOString().split("T")[0]
+    const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=1D&date=${dateStr}`)
+    const data = await res.json()
+    if (Array.isArray(data) && data.length > 0) return data
+  }
+  return []
 }
 
 export default function StockChart({ symbol }: Props) {
@@ -14,6 +34,7 @@ export default function StockChart({ symbol }: Props) {
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null)
 
   const [range, setRange] = useState("1D")
+  const { theme, resolvedTheme } = useTheme()
 
   /* ---------------- Create Chart Once ---------------- */
 
@@ -21,16 +42,18 @@ export default function StockChart({ symbol }: Props) {
     const container = chartContainerRef.current
     if (!container) return
 
+    const isDark = (theme === "system" ? resolvedTheme : theme) === "dark"
+
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: 500,
+      height: 380,
       layout: {
-        background: { type: ColorType.Solid, color: "#020617" },
-        textColor: "#cbd5f5",
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: isDark ? "#cbd5f5" : "#334155",
       },
       grid: {
-        vertLines: { color: "#1e293b" },
-        horzLines: { color: "#1e293b" },
+        vertLines: { color: "rgba(100, 116, 139, 0.2)" },
+        horzLines: { color: "rgba(100, 116, 139, 0.2)" },
       },
       localization: {
         locale: "en-IN",
@@ -45,7 +68,7 @@ export default function StockChart({ symbol }: Props) {
           }),
       },
       timeScale: {
-        borderColor: "#1e293b",
+        borderColor: "rgba(100, 116, 139, 0.2)",
         timeVisible: true,
         secondsVisible: false,
         tickMarkFormatter: (time: number) =>
@@ -74,10 +97,7 @@ export default function StockChart({ symbol }: Props) {
     })
 
     volumeSeries.priceScale().applyOptions({
-      scaleMargins: {
-        top: 0.8,
-        bottom: 0,
-      },
+      scaleMargins: { top: 0.8, bottom: 0 },
     })
 
     chartRef.current = chart
@@ -87,29 +107,12 @@ export default function StockChart({ symbol }: Props) {
     /* ---------------- Crosshair Tooltip ---------------- */
 
     const toolTip = document.createElement("div")
-    toolTip.style.cssText = `
-      position: absolute;
-      display: none;
-      padding: 6px 10px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      font-size: 12px;
-      color: #cbd5f5;
-      pointer-events: none;
-      z-index: 100;
-      white-space: nowrap;
-    `
+    toolTip.className = "absolute hidden px-3 py-2 bg-popover border border-border rounded-md text-xs text-popover-foreground pointer-events-none z-[100] whitespace-nowrap shadow-md"
     container.style.position = "relative"
     container.appendChild(toolTip)
 
     chart.subscribeCrosshairMove((param) => {
-      if (
-        !param.point ||
-        !param.time ||
-        param.point.x < 0 ||
-        param.point.y < 0
-      ) {
+      if (!param.point || !param.time || param.point.x < 0 || param.point.y < 0) {
         toolTip.style.display = "none"
         return
       }
@@ -132,12 +135,12 @@ export default function StockChart({ symbol }: Props) {
 
       toolTip.style.display = "block"
       toolTip.innerHTML = `
-        <div style="color:#94a3b8;margin-bottom:4px">${formatted}</div>
+        <div class="text-muted-foreground mb-1">${formatted}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">
-          <span style="color:#94a3b8">O</span><span>₹${data.open.toFixed(2)}</span>
-          <span style="color:#94a3b8">H</span><span style="color:#22c55e">₹${data.high.toFixed(2)}</span>
-          <span style="color:#94a3b8">L</span><span style="color:#ef4444">₹${data.low.toFixed(2)}</span>
-          <span style="color:#94a3b8">C</span><span>₹${data.close.toFixed(2)}</span>
+          <span class="text-muted-foreground">O</span><span class="font-medium">₹${data.open.toFixed(2)}</span>
+          <span class="text-muted-foreground">H</span><span class="font-medium text-emerald-500">₹${data.high.toFixed(2)}</span>
+          <span class="text-muted-foreground">L</span><span class="font-medium text-red-500">₹${data.low.toFixed(2)}</span>
+          <span class="text-muted-foreground">C</span><span class="font-medium">₹${data.close.toFixed(2)}</span>
         </div>
       `
 
@@ -147,8 +150,6 @@ export default function StockChart({ symbol }: Props) {
       toolTip.style.left = (left + tooltipWidth > containerWidth ? left - tooltipWidth - 32 : left) + "px"
       toolTip.style.top = Math.max(0, param.point.y - 60) + "px"
     })
-
-    /* ---------------- Resize ---------------- */
 
     const handleResize = () => {
       chart.applyOptions({ width: container.clientWidth })
@@ -163,41 +164,70 @@ export default function StockChart({ symbol }: Props) {
     }
   }, [])
 
-  /* ---------------- Fetch Data ---------------- */
+  /* ---------------- Handle Theme Change ---------------- */
 
   useEffect(() => {
-    async function loadChartData() {
+    if (chartRef.current) {
+      const isDark = (theme === "system" ? resolvedTheme : theme) === "dark"
+      chartRef.current.applyOptions({
+        layout: {
+          textColor: isDark ? "#cbd5f5" : "#334155",
+        },
+      })
+    }
+  }, [theme, resolvedTheme])
+
+  /* ---------------- Fetch Data with Fallback ---------------- */
+
+  useEffect(() => {
+    async function loadChartData(currentRange: string) {
       seriesRef.current?.setData([])
       volumeSeriesRef.current?.setData([])
 
-      const res = await fetch(`/api/stocks/${symbol}?range=${range}`)
-      const data = await res.json()
+      try {
+        let data: any[]
 
-      if (!Array.isArray(data) || data.length === 0) {
-        console.log("No chart data returned")
-        return
+        if (currentRange === "1D") {
+          data = await fetchWithDayFallback(symbol)
+        } else {
+          const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=${encodeURIComponent(currentRange)}`)
+          data = await res.json()
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+          const fallbacks = FALLBACK_RANGES[currentRange]
+          if (fallbacks && fallbacks.length > 0) {
+            console.log(`No data for ${currentRange}, falling back to ${fallbacks[0]}`)
+            loadChartData(fallbacks[0])
+          } else {
+            console.log("No chart data found for any range")
+          }
+          return
+        }
+
+        const candleData = data.map((d: any) => ({
+          time: d.time,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+        }))
+
+        const volumeData = data.map((d: any) => ({
+          time: d.time,
+          value: d.volume,
+          color: d.close >= d.open ? "#22c55e50" : "#ef444450",
+        }))
+
+        seriesRef.current?.setData(candleData)
+        volumeSeriesRef.current?.setData(volumeData)
+        chartRef.current?.timeScale().fitContent()
+      } catch (err) {
+        console.error("Chart fetch error:", err)
       }
-
-      const candleData = data.map((d: any) => ({
-        time: d.time,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }))
-
-      const volumeData = data.map((d: any) => ({
-        time: d.time,
-        value: d.volume,
-        color: d.close >= d.open ? "#22c55e50" : "#ef444450",
-      }))
-
-      seriesRef.current?.setData(candleData)
-      volumeSeriesRef.current?.setData(volumeData)
-      chartRef.current?.timeScale().fitContent()
     }
 
-    loadChartData()
+    loadChartData(range)
   }, [symbol, range])
 
   /* ---------------- UI ---------------- */
@@ -209,9 +239,9 @@ export default function StockChart({ symbol }: Props) {
           <button
             key={r}
             onClick={() => setRange(r)}
-            className={`px-3 py-1 rounded text-sm ${range === r
-              ? "bg-blue-500 text-white"
-              : "bg-gray-800 text-gray-300"
+            className={`px-3 py-1 rounded text-sm transition-colors ${range === r
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
           >
             {r}

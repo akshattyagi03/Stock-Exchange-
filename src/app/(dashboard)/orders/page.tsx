@@ -31,7 +31,7 @@ interface IOrder {
     status: "pending" | "partially_executed" | "executed" | "cancelled"
     createdAt: string
 }
-function DataTable({ columns, data }: DataTableProps<IOrder, any>) {
+function DataTable({ columns, data }: DataTableProps<IOrder, unknown>) {
     const table = useReactTable({
         data,
         columns,
@@ -100,14 +100,7 @@ export default function Page() {
                 }
 
                 const data = await response.json()
-
-                const filteredOrders = (data.orders || []).filter(
-                    (order: IOrder) =>
-                        order.status === "pending" ||
-                        order.status === "partially_executed"
-                )
-
-                setOrders(filteredOrders)
+                setOrders(data.orders || [])
 
             } catch (err) {
                 setError(err instanceof Error ? err.message : "An error occurred")

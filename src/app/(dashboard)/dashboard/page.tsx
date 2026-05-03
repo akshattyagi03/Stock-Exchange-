@@ -18,7 +18,6 @@ const ChartAreaInteractive = dynamic(
 export default function Page() {
   const { data: session } = useSession()
   const [holdings, setHoldings] = useState([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchHoldings = async () => {
@@ -33,8 +32,6 @@ export default function Page() {
         }
       } catch (error) {
         console.error("Error fetching holdings:", error)
-      } finally {
-        setLoading(false)
       }
     }
 

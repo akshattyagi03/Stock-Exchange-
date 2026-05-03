@@ -8,6 +8,7 @@ export interface IWatchlistItem {
 
 export interface IWatchlist extends Document {
   userId: mongoose.Types.ObjectId;
+  name: string;
   stocks: IWatchlistItem[];
   createdAt: Date;
   updatedAt: Date;
@@ -34,13 +35,20 @@ const WatchlistSchema = new Schema<IWatchlist>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // one watchlist per user
+      index: true // ✅ removed unique constraint
+    },
+
+    name: {
+      type: String,
+      required: true
     },
 
     stocks: [WatchlistItemSchema],
   },
   { timestamps: true }
 );
+
+WatchlistSchema.index({ userId: 1, name: 1 }, { unique: true });
 
 export const Watchlist =
   models.Watchlist || model<IWatchlist>("Watchlist", WatchlistSchema);

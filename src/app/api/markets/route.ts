@@ -3,29 +3,31 @@ import axios from "axios"
 import { redis, connectRedis } from "@/lib/redis"
 
 const CACHE_KEY = "markets:top_stocks"
-const CACHE_TTL = 30 // seconds
+const CACHE_TTL = 5
+
+const STOCKS = [
+  { key: "NSE_EQ|INE009A01021", symbol: "RELIANCE" },
+  { key: "NSE_EQ|INE467B01029", symbol: "TCS" },
+  { key: "NSE_EQ|INE040A01034", symbol: "HDFCBANK" },
+  { key: "NSE_EQ|INE002A01018", symbol: "INFY" },
+]
 
 export async function GET() {
   try {
     await connectRedis()
 
+    // 🔹 1. Check cache
     const cached = await redis.get(CACHE_KEY)
     if (cached) {
-      console.log("Serving from Redis cache")
       return NextResponse.json({
         stocks: JSON.parse(cached),
+        source: "cache",
       })
     }
 
     const accessToken = process.env.UPSTOX_ACCESS_TOKEN
 
-    const instrumentKeys = [
-      "NSE_EQ|INE009A01021",
-      "NSE_EQ|INE467B01029",
-      "NSE_EQ|INE040A01034",
-      "NSE_EQ|INE002A01018",
-    ]
-
+    // 🔹 2. Fetch from Upstox
     const response = await axios.get(
       "https://api.upstox.com/v2/market-quote/quotes",
       {
@@ -33,20 +35,18 @@ export async function GET() {
           Authorization: `Bearer ${accessToken}`,
         },
         params: {
-          instrument_key: instrumentKeys.join(","),
+          instrument_key: STOCKS.map(s => s.key).join(","),
         },
       }
     )
 
     const rawData = response.data.data
 
+    // 🔹 3. Transform
     const formattedStocks = Object.entries(rawData).map(
       ([instrumentKey, stock]: [string, any]) => {
-
         const lastPrice = stock.last_price
         const netChange = stock.net_change
-
-        // previous close = last price - change
         const previousClose = lastPrice - netChange
 
         const changePercent =
@@ -65,16 +65,30 @@ export async function GET() {
       }
     )
 
+    // 🔹 4. Sort (important for UI)
+    formattedStocks.sort((a, b) => b.change - a.change)
+
+    // 🔹 5. Cache
     await redis.set(CACHE_KEY, JSON.stringify(formattedStocks), {
       EX: CACHE_TTL,
     })
 
-    console.log("Stored in Redis")
-
-    return NextResponse.json({ stocks: formattedStocks })
+    return NextResponse.json({
+      stocks: formattedStocks,
+      source: "api",
+    })
 
   } catch (error: any) {
     console.error("Markets Error:", error.response?.data || error.message)
+
+    // 🔹 Fallback to cache if available
+    const cached = await redis.get(CACHE_KEY)
+    if (cached) {
+      return NextResponse.json({
+        stocks: JSON.parse(cached),
+        source: "stale-cache",
+      })
+    }
 
     return NextResponse.json(
       { message: "Failed to fetch market data" },

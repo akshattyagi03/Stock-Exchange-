@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server"
 import { getStockQuote } from "@/lib/upstox"
 import { redis, connectRedis } from "@/lib/redis"
-
-const instrumentMap: Record<string, string> = {
-  RELIANCE: "NSE_EQ|INE002A01018",
-  TCS: "NSE_EQ|INE467B01029",
-  INFY: "NSE_EQ|INE009A01021",
-  HDFCBANK: "NSE_EQ|INE040A01034",
-}
+import { getInstrumentKeyBySymbol } from "@/lib/instruments"
 
 export async function GET(
   req: Request,
@@ -25,7 +19,7 @@ export async function GET(
       return NextResponse.json(JSON.parse(cached))
     }
 
-    const instrumentKey = instrumentMap[upperSymbol]
+    const instrumentKey = getInstrumentKeyBySymbol(upperSymbol)
 
     if (!instrumentKey) {
       return NextResponse.json({ error: "Invalid symbol" }, { status: 400 })

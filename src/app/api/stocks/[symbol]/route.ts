@@ -1,6 +1,7 @@
 import axios from "axios"
 import { NextResponse } from "next/server"
 import { redis, connectRedis } from "@/lib/redis"
+import { getInstrumentKeyBySymbol } from "@/lib/instruments"
 
 export async function GET(
   req: Request,
@@ -10,29 +11,20 @@ export async function GET(
     await connectRedis()
 
     const { symbol } = await params
+    const upperSymbol = symbol.toUpperCase()
     const { searchParams } = new URL(req.url)
 
     const range = searchParams.get("range") || "1M"
-    const cacheKey = `stock:${symbol}:${range}`
-
-    /* ---------- REDIS CACHE ---------- */
+    const dateParam = searchParams.get("date")
+    const cacheKey = `stock:${upperSymbol}:${range}:${dateParam || "latest"}`
 
     const cached = await redis.get(cacheKey)
     if (cached) {
-      console.log("Serving from Redis cache")
       return NextResponse.json(JSON.parse(cached))
     }
 
     const accessToken = process.env.UPSTOX_ACCESS_TOKEN
-
-    const instrumentMap: Record<string, string> = {
-      INFY: "NSE_EQ|INE009A01021",
-      TCS: "NSE_EQ|INE467B01029",
-      HDFCBANK: "NSE_EQ|INE040A01034",
-      RELIANCE: "NSE_EQ|INE002A01018",
-    }
-
-    const instrumentKey = instrumentMap[symbol]
+    const instrumentKey = getInstrumentKeyBySymbol(upperSymbol)
 
     if (!instrumentKey) {
       return NextResponse.json({ error: "Invalid symbol" }, { status: 400 })
@@ -42,12 +34,14 @@ export async function GET(
     let fromDate = new Date()
     let url = ""
 
-    /* ---------- RANGE LOGIC ---------- */
-
     if (range === "1D") {
-      url = `https://api.upstox.com/v2/historical-candle/intraday/${encodeURIComponent(
+      const targetDate = dateParam || today.toISOString().split("T")[0]
+      const prevDate = new Date(targetDate)
+      prevDate.setDate(prevDate.getDate() - 1)
+
+      url = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
         instrumentKey
-      )}/1minute`
+      )}/minutes/5/${targetDate}/${prevDate.toISOString().split("T")[0]}`
     } else if (range === "1W") {
       fromDate.setDate(today.getDate() - 7)
       url = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
@@ -65,11 +59,7 @@ export async function GET(
       )}/day/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
     }
 
-    console.log("UPSTOX URL:", url)
-
-    /* ---------- FETCH DATA ---------- */
-
-    let response = await axios.get(url, {
+    const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
@@ -78,40 +68,13 @@ export async function GET(
 
     let candles = response.data?.data?.candles || []
 
-    /* ---------- FALLBACK IF INTRADAY EMPTY ---------- */
-
-    if (range === "1D" && candles.length === 0) {
-      console.log("Intraday empty → fallback to last session")
-
-      fromDate.setDate(today.getDate() - 1)
-
-      const fallbackUrl = `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
-        instrumentKey
-      )}/minutes/5/${today.toISOString().split("T")[0]}/${fromDate.toISOString().split("T")[0]}`
-
-      const fallbackRes = await axios.get(fallbackUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-        },
-      })
-
-      candles = fallbackRes.data?.data?.candles || []
-
-      // Filter to only the most recent trading day
-      // Upstox returns candles newest-first before we reverse
-      if (candles.length > 0) {
-        const lastCandleDate = new Date(candles[0][0]).toDateString()
-        candles = candles.filter(
-          (c: any) => new Date(c[0]).toDateString() === lastCandleDate
-        )
-      }
+    if (range === "1D" && candles.length > 0) {
+      const targetDate = dateParam || today.toISOString().split("T")[0]
+      candles = candles.filter(
+        (c: any) => new Date(c[0]).toISOString().split("T")[0] === targetDate
+      )
     }
 
-    /* ---------- FORMAT FOR CHART ---------- */
-
-    // Upstox timestamps like "2024-03-11T09:15:00+05:30" are parsed by
-    // new Date() into correct UTC milliseconds — no IST offset needed on frontend
     const chartData = candles.map((c: any) => ({
       time: Math.floor(new Date(c[0]).getTime() / 1000),
       open: Number(c[1]),
@@ -122,8 +85,6 @@ export async function GET(
     }))
 
     const result = chartData.reverse()
-
-    /* ---------- CACHE ---------- */
 
     if (result.length > 0) {
       await redis.set(cacheKey, JSON.stringify(result), { EX: 30 })

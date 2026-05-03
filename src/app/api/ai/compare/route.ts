@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 
 const compareSchema = z.object({
   symbols: z.array(z.string().min(1)).min(2).max(4),
+  level: z.enum(["beginner", "intermediate", "experienced", "trader"]).default("intermediate"),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,12 +18,23 @@ export async function POST(req: NextRequest) {
       return new Response("Invalid input", { status: 400 });
     }
 
-    const { symbols } = parsed.data;
+    const { symbols, level } = parsed.data;
     const list = symbols.join(", ");
+
+    const LEVEL_PROMPTS: Record<string, string> = {
+      beginner: "Use simple language, avoid complex financial jargon. Explain any basic concepts you mention. Make it easy to understand for someone completely new to investing.",
+      intermediate: "Use standard financial terms but briefly explain complex metrics. Assume the user knows the basics but might not be an expert in deep technical analysis.",
+      experienced: "Provide detailed technical and fundamental analysis. Use standard financial metrics, ratios, and chart context without over-explaining. Assume high financial literacy.",
+      trader: "Be concise, actionable, and focus heavily on technical analysis, price action, momentum, and short-to-medium-term catalysts. Provide advanced metrics without explanation.",
+    };
+
+    const levelInstruction = LEVEL_PROMPTS[level] || LEVEL_PROMPTS.intermediate;
 
     const prompt = `
 You are a professional financial advisor AI specialising in Indian stock markets (NSE/BSE).
 Compare the following stocks: ${list}.
+The user has selected the experience level: ${level.toUpperCase()}.
+CRITICAL INSTRUCTION FOR TONE AND COMPLEXITY: ${levelInstruction}
 
 Structure your response exactly as follows:
 

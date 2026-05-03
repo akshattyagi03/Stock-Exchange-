@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { AuthOptions } from "@/app/api/auth/[...nextauth]/options";
 import dbConnect from "@/lib/dbConnect";
-import UserModel from "@/models/User";
+import { Watchlist } from "@/models/Watchlist";
 
 export async function POST(req: NextRequest) {
   await dbConnect();
 
-  const { userId, instrumentKey, symbol } = await req.json();
+  const session = await getServerSession(AuthOptions);
+  if (!session?.user?._id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const userId = session.user._id;
 
-  if (!userId || !instrumentKey || !symbol) {
+  const { watchlistId, instrumentKey, symbol } = await req.json();
+
+  if (!instrumentKey || !symbol) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 }
@@ -15,17 +23,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const user = await UserModel.findById(userId);
+    let targetWatchlist;
+    if (watchlistId) {
+      targetWatchlist = await Watchlist.findOne({ _id: watchlistId, userId });
+    } else {
+      targetWatchlist = await Watchlist.findOne({ userId });
+    }
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+    if (!targetWatchlist) {
+      targetWatchlist = await Watchlist.create({ userId, name: "My Watchlist", stocks: [] });
     }
 
     // Prevent duplicate
-    const exists = user.watchlist.some(
+    const exists = targetWatchlist.stocks.some(
       (item: any) => item.instrumentKey === instrumentKey
     );
 
@@ -36,17 +46,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    user.watchlist.push({
+    if (targetWatchlist.stocks.length >= 50) {
+      return NextResponse.json(
+        { error: "Watchlist is full (max 50 stocks)" },
+        { status: 400 }
+      );
+    }
+
+    targetWatchlist.stocks.push({
       instrumentKey,
       symbol,
       addedAt: new Date(),
     });
 
-    await user.save();
+    await targetWatchlist.save();
 
     return NextResponse.json({
       message: "Added to watchlist",
-      watchlist: user.watchlist,
+      watchlist: targetWatchlist,
     });
   } catch (error) {
     console.error("Add Watchlist Error:", error);
