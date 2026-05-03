@@ -2,6 +2,7 @@ import "dotenv/config"
 
 import { Job, Queue, Worker } from "bullmq"
 import mongoose from "mongoose"
+import http from "http"
 
 import {
   createRedisConnection,
@@ -14,6 +15,14 @@ import {
 } from "@/workers/orderEngine"
 
 const MARKET_CLOSE_SWEEP_JOB = "cancel-market-close"
+
+// Keep-alive HTTP server for Render free tier
+http.createServer((_, res) => {
+  res.writeHead(200)
+  res.end("Worker running")
+}).listen(process.env.PORT || 3001, () => {
+  console.log("[worker] Keep-alive server listening")
+})
 
 async function main() {
   console.log("[worker] Connecting to MongoDB...")
