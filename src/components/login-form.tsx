@@ -49,7 +49,7 @@ export function LoginForm({
     }
 
     toast.success("Login successful!", { position: "top-center" });
-    router.push("/dashboard");
+    window.location.href = "/dashboard";
   };
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className={cn("flex flex-col gap-6", className)} {...props}>
@@ -98,7 +98,7 @@ export function LoginForm({
             variant="outline"
             type="button"
             className="border-white/10 bg-zinc-900 hover:bg-zinc-800 text-white"
-            onClick={() => signIn("google")}
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
