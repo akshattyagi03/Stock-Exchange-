@@ -156,6 +156,7 @@ export default function BillingPage() {
   const isPremium = tier === "premium"
 
   async function handleUpgrade() {
+    console.log("[billing] handleUpgrade called, Razorpay loaded:", !!(window as any).Razorpay)
     if (!(window as any).Razorpay) {
       toast.error("Payment gateway not loaded. Please refresh and try again.")
       return
@@ -164,6 +165,7 @@ export default function BillingPage() {
     try {
       const res = await fetch("/api/billing/create-order", { method: "POST" })
       const data = await res.json()
+      console.log("[billing] create-order:", res.status, data)
 
       if (!res.ok) {
         toast.error(data.error || "Failed to initiate payment")
@@ -179,6 +181,7 @@ export default function BillingPage() {
         description: "Premium Plan — Monthly",
         order_id: data.orderId,
         handler: async function (response: any) {
+          console.log("[billing] payment success:", response)
           const verifyRes = await fetch("/api/billing/verify-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -188,9 +191,8 @@ export default function BillingPage() {
               razorpay_signature: response.razorpay_signature,
             }),
           })
-
           const verifyData = await verifyRes.json()
-
+          console.log("[billing] verify-payment:", verifyRes.status, verifyData)
           if (verifyData.success) {
             setTier("premium")
             setStatus("active")
@@ -202,18 +204,24 @@ export default function BillingPage() {
         prefill: {},
         theme: { color: "#a855f7" },
         modal: {
-          ondismiss: () => setUpgrading(false),
+          ondismiss: () => {
+            console.log("[billing] modal dismissed")
+            setUpgrading(false)
+          },
         },
       }
 
+      console.log("[billing] opening Razorpay, key present:", !!options.key)
       const rzp = new (window as any).Razorpay(options)
-      rzp.on("payment.failed", () => {
+      rzp.on("payment.failed", (resp: any) => {
+        console.error("[billing] payment.failed:", resp)
         toast.error("Payment failed. Please try again.")
         setUpgrading(false)
       })
       rzp.open()
       setUpgrading(false)
-    } catch {
+    } catch (err) {
+      console.error("[billing] caught error:", err)
       toast.error("Something went wrong. Please try again.")
       setUpgrading(false)
     }
