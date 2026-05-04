@@ -10,6 +10,7 @@ const accountSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   orderExecutionAlerts: z.boolean().optional(),
+  tier: z.enum(["standard", "premium"]).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -28,7 +29,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { name, password, orderExecutionAlerts } = parsed.data;
+    const { name, password, orderExecutionAlerts, tier } = parsed.data;
     const user = await UserModel.findById(session.user._id);
 
     if (!user) {
@@ -37,6 +38,7 @@ export async function PATCH(req: Request) {
 
     if (name) user.name = name;
     if (typeof orderExecutionAlerts === "boolean") user.orderExecutionAlerts = orderExecutionAlerts;
+    if (tier) user.tier = tier;
     
     if (password) {
       if (user.authProvider !== "credentials") {

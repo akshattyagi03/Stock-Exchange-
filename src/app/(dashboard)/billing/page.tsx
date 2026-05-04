@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   CreditCard,
   Sparkles,
@@ -9,26 +9,17 @@ import {
   Zap,
   ShieldCheck,
   AlertTriangle,
-  ChevronRight,
   Crown,
 } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
+import Script from "next/script"
 
 /* ── Types & mock data ───────────────────────────────────── */
 
-type UserTier = "free" | "premium"
+type UserTier = "standard" | "premium"
 type SubscriptionStatus = "active" | "cancelled" | "past_due"
-
-const user = {
-  name: "Akshat",
-  subscription: {
-    tier: "free" as UserTier,
-    status: "active" as SubscriptionStatus,
-    renewalDate: "2026-06-01",
-  },
-}
 
 /* ── Feature lists ───────────────────────────────────────── */
 
@@ -148,32 +139,100 @@ export default function BillingPage() {
   const [upgrading, setUpgrading] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [tier, setTier] = useState<UserTier>(user.subscription.tier)
-  const [status, setStatus] = useState<SubscriptionStatus>(user.subscription.status)
+  const [tier, setTier] = useState<UserTier>("standard")
+  const [status, setStatus] = useState<SubscriptionStatus>("active")
+  const [loadingTier, setLoadingTier] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setTier(data.tier ?? "standard")
+      })
+      .catch(() => {})
+      .finally(() => setLoadingTier(false))
+  }, [])
 
   const isPremium = tier === "premium"
 
   async function handleUpgrade() {
     setUpgrading(true)
-    await new Promise((r) => setTimeout(r, 1800))
-    console.log("Initiate Razorpay subscription")
-    // Simulate success for UI demo
-    setTier("premium")
-    setStatus("active")
-    setUpgrading(false)
+    try {
+      const res = await fetch("/api/billing/create-order", { method: "POST" })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || "Failed to initiate payment")
+        setUpgrading(false)
+        return
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency: data.currency,
+        name: "Stock-Ex",
+        description: "Premium Plan — Monthly",
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          const verifyRes = await fetch("/api/billing/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          })
+
+          const verifyData = await verifyRes.json()
+
+          if (verifyData.success) {
+            setTier("premium")
+            setStatus("active")
+            toast.success("Welcome to Premium! 🎉")
+          } else {
+            toast.error("Payment verification failed. Contact support.")
+          }
+        },
+        prefill: {},
+        theme: { color: "#a855f7" },
+        modal: {
+          ondismiss: () => setUpgrading(false),
+        },
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+      rzp.open()
+      setUpgrading(false)
+    } catch {
+      toast.error("Something went wrong. Please try again.")
+      setUpgrading(false)
+    }
   }
 
   async function handleCancel() {
     setShowConfirm(false)
     setCancelling(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setTier("free")
-    setStatus("active")
-    setCancelling(false)
+    try {
+      await fetch("/api/settings/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: "standard" }),
+      })
+      setTier("standard")
+      setStatus("active")
+      toast.success("Subscription cancelled")
+    } catch {
+      toast.error("Failed to cancel subscription")
+    } finally {
+      setCancelling(false)
+    }
   }
 
   return (
     <>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
       <ConfirmDialog
         open={showConfirm}
         onConfirm={handleCancel}
@@ -252,7 +311,7 @@ export default function BillingPage() {
                       {isPremium ? "Premium Plan" : "Free Plan"}
                     </p>
                     <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 2 }}>
-                      {isPremium ? `Renews on ${new Date(user.subscription.renewalDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}` : "You are on the Free Plan"}
+                      {isPremium ? "Active Premium subscription" : "You are on the Standard Plan"}
                     </p>
                   </div>
                 </div>
