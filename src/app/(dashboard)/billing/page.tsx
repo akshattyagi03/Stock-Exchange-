@@ -156,6 +156,10 @@ export default function BillingPage() {
   const isPremium = tier === "premium"
 
   async function handleUpgrade() {
+    if (!(window as any).Razorpay) {
+      toast.error("Payment gateway not loaded. Please refresh and try again.")
+      return
+    }
     setUpgrading(true)
     try {
       const res = await fetch("/api/billing/create-order", { method: "POST" })
@@ -203,6 +207,10 @@ export default function BillingPage() {
       }
 
       const rzp = new (window as any).Razorpay(options)
+      rzp.on("payment.failed", () => {
+        toast.error("Payment failed. Please try again.")
+        setUpgrading(false)
+      })
       rzp.open()
       setUpgrading(false)
     } catch {
@@ -232,7 +240,11 @@ export default function BillingPage() {
 
   return (
     <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+        onError={() => toast.error("Failed to load payment gateway")}
+      />
       <ConfirmDialog
         open={showConfirm}
         onConfirm={handleCancel}
