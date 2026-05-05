@@ -44,6 +44,7 @@ export default function Markets() {
     const [insightLoading, setInsightLoading] = useState(false)
 
     const searchRef = useRef<HTMLDivElement>(null)
+    const insightFetched = useRef(false)
     const router = useRouter()
 
     // 🔍 Search
@@ -97,7 +98,8 @@ export default function Markets() {
                 setSource(stocksData.source)
                 setLoading(false)
 
-                if (fetchedIndices.length > 0 && !insight) {
+                if (fetchedIndices.length > 0 && !insightFetched.current) {
+                    insightFetched.current = true
                     setInsightLoading(true)
                     fetch("/api/ai/market-insight", {
                         method: "POST",
@@ -110,6 +112,7 @@ export default function Markets() {
                     })
                         .then(r => r.json())
                         .then(d => setInsight(d.insight || ""))
+                        .catch(() => setInsight("Unable to load insight."))
                         .finally(() => setInsightLoading(false))
                 }
             } catch (err) {

@@ -9,7 +9,7 @@ import HoldingModel from "@/models/Holdings"
 import OrderModel, { type IOrder } from "@/models/Orders"
 import UserModel from "@/models/User"
 import { generateOrderId } from "@/utils/generateOrderId"
-import { cancelOrder, executeBuyOrder, executeSellOrder } from "@/workers/orderEngine"
+import { cancelOrder, executeBuyOrder, executeSellOrder, isMarketOpen } from "@/workers/orderEngine"
 import { getStockPrice } from "@/lib/fmp"
 import { getInstrumentKeyBySymbol } from "@/lib/instruments"
 import { getStockQuote } from "@/lib/upstox"
@@ -45,6 +45,13 @@ export async function POST(request: Request) {
     const quantity = Number(payload.quantity)
     const orderType = payload.orderType
     const isMarketOrder = payload.isMarketOrder === true
+
+    if (!isMarketOpen()) {
+      return NextResponse.json(
+        { success: false, message: "Orders can only be placed during market hours (Mon–Fri, 9:15 AM – 3:30 PM IST)" },
+        { status: 400 }
+      )
+    }
 
     let price: number
 

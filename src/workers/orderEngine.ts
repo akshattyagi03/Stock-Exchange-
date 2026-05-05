@@ -21,6 +21,18 @@ function getIstDate(date = new Date()) {
   return new Date(date.getTime() + IST_OFFSET_MS)
 }
 
+export function isMarketOpen(date = new Date()) {
+  const istNow = getIstDate(date)
+  const day = istNow.getUTCDay() // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false
+
+  const hours = istNow.getUTCHours()
+  const minutes = istNow.getUTCMinutes()
+  const totalMinutes = hours * 60 + minutes
+
+  return totalMinutes >= 9 * 60 + 15 && totalMinutes < 15 * 60 + 30
+}
+
 export function isPastMarketClose(date = new Date()) {
   const istNow = getIstDate(date)
   const hours = istNow.getUTCHours()
