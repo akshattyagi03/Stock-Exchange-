@@ -286,7 +286,7 @@ export default function QuickOrderPage() {
 
         {/* Order ticket or empty state */}
         {selectedStock ? (
-          <OrderTicket stockName={selectedStock.trading_symbol} />
+          <OrderTicket stockName={selectedStock.trading_symbol} defaultPrice={stockInfo?.price} />
         ) : (
           <div
             style={{

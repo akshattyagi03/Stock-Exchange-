@@ -23,6 +23,21 @@ async function getStockProfile(symbol: string) {
   }
 }
 
+async function getStockPrice(symbol: string): Promise<number | undefined> {
+  try {
+    const apiKey = process.env.FMP_API_KEY
+    if (!apiKey) return undefined
+    const res = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=${symbol}.NS&apikey=${apiKey}`, {
+      next: { revalidate: 30 }
+    })
+    if (!res.ok) return undefined
+    const data = await res.json()
+    return Array.isArray(data) && data.length > 0 ? data[0]?.price : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export default async function StockPage({
   params,
 }: {
@@ -36,6 +51,8 @@ export default async function StockPage({
   if (!profile) {
     profile = await getStockProfile(stock);
   }
+
+  const currentPrice = await getStockPrice(stock)
 
   return (
     <div className="p-6" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -72,7 +89,7 @@ export default async function StockPage({
 
         {/* Order ticket col — aligns to top, does not stretch */}
         <div style={{ width: "300px", flexShrink: 0, height: "100%" }}>
-          <OrderTicket stockName={stock} />
+          <OrderTicket stockName={stock} defaultPrice={currentPrice} />
         </div>
       </div>
 

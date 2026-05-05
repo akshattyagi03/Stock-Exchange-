@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 
 interface OrderTicketProps {
   stockName: string
+  defaultPrice?: number
 }
 
 const COLORS = {
@@ -24,11 +25,11 @@ const COLORS = {
   },
 }
 
-export default function OrderTicket({ stockName }: OrderTicketProps) {
+export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProps) {
   const router = useRouter()
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy")
   const [quantity, setQuantity] = useState("1")
-  const [price, setPrice] = useState("")
+  const [price, setPrice] = useState(defaultPrice ? String(defaultPrice) : "")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hoveredType, setHoveredType] = useState<"buy" | "sell" | null>(null)
 
