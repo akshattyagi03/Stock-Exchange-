@@ -106,7 +106,7 @@ export function NavUser({
   return (
     <>
       <Sheet open={accountOpen} onOpenChange={setAccountOpen}>
-        <SheetContent side="right" className="w-[70%] sm:max-w-none overflow-y-auto">
+        <SheetContent side="right" className="w-[40%] sm:max-w-none overflow-y-auto">
           <SheetHeader className="mb-4">
             <SheetTitle>Account Settings</SheetTitle>
           </SheetHeader>

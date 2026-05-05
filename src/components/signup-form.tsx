@@ -149,7 +149,7 @@ export function SignupForm({
         </Field>
 
         <div className="relative text-center text-sm text-white/60">
-          <span className="bg-zinc-900 px-2 relative z-10">
+          <span className="px-2 relative z-10">
             Or continue with
           </span>
           <div className="absolute inset-0 flex items-center">
@@ -159,7 +159,7 @@ export function SignupForm({
 
         <Field>
           <Button
-            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 text-white"
+            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 hover:text-white text-white"
             variant="outline"
             type="button"
             onClick={() => signIn("google")}
@@ -190,7 +190,7 @@ export function SignupForm({
 
           <FieldDescription className="px-6 text-center">
             Already have an account?{" "}
-            <Link href="/sign-in">Sign in</Link>
+            <Link href="/sign-in" className="text-white underline underline-offset-4 hover:text-white/80">Sign in</Link>
           </FieldDescription>
         </Field>
       </FieldGroup>

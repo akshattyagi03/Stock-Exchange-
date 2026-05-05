@@ -84,7 +84,7 @@ export function LoginForm({
           <Button type="submit">Login</Button>
         </Field>
         <div className="relative text-center text-sm text-white/60">
-          <span className="bg-zinc-900 px-2 relative z-10">
+          <span className=" px-2 relative z-10">
             Or continue with
           </span>
 
@@ -97,7 +97,7 @@ export function LoginForm({
           <Button
             variant="outline"
             type="button"
-            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 text-white"
+            className="border-white/10 bg-zinc-900 hover:bg-zinc-800 hover:text-white text-white"
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           >
             <svg
@@ -126,7 +126,7 @@ export function LoginForm({
           </Button>
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}
-            <Link href="/sign-up" className="underline underline-offset-4">
+            <Link href="/sign-up" className="underline underline-offset-4 text-white hover:text-white/80">
               Sign up
             </Link>
           </FieldDescription>

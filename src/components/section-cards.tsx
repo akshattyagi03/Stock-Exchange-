@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
 
 import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 import {
   Card,
   CardAction,
@@ -34,6 +35,7 @@ export function SectionCards() {
     overallPnL: 0,
     todaysPnL: 0,
   })
+  const [loading, setLoading] = useState(true)
 
   const fetchSummary = async () => {
     if (document.visibilityState !== "visible") return
@@ -49,6 +51,8 @@ export function SectionCards() {
       })
     } catch (error) {
       console.error("Failed to fetch summary:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -86,6 +90,15 @@ export function SectionCards() {
     summary.totalInvested > 0
       ? (summary.overallPnL / summary.totalInvested) * 100
       : 0
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
+        <Loader2 className="animate-spin" size={18} />
+        <span className="text-sm">Loading portfolio summary...</span>
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">

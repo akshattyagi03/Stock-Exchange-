@@ -1,7 +1,7 @@
 "use client"
 
 import { GalleryVerticalEnd } from "lucide-react"
-import { DotLottieReact } from "@lottiefiles/dotlottie-react"
+import Image from "next/image"
 import { SignupForm } from "@/components/signup-form"
 
 export default function SignupPage() {
@@ -28,18 +28,35 @@ export default function SignupPage() {
 
       </div>
 
-      {/* RIGHT SIDE ANIMATION */}
-      <div className="relative hidden lg:flex items-center justify-center overflow-hidden bg-linear-to-b from-black via-zinc-900 to-zinc-950">
+      {/* RIGHT SIDE — hero image */}
+      <div className="relative hidden lg:flex items-center justify-center overflow-hidden">
 
-        {/* glow behind animation */}
-        <div className="absolute w-125 h-125 bg-emerald-500/10 blur-[120px] rounded-full" />
-
-        <DotLottieReact
-          src="https://lottie.host/78813d34-220e-4ae2-af6d-30c84577886e/nWfDGO2LcO.lottie"
-          loop
-          autoplay
-          className="w-175 h-175 object-contain relative z-10"
+        {/* Unsplash image */}
+        <Image
+          src="https://images.unsplash.com/photo-1615992174118-9b8e9be025e7?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          alt="Financial growth and investment"
+          fill
+          priority
+          className="object-cover"
+          sizes="50vw"
         />
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-linear-to-br from-black/70 via-zinc-900/40 to-emerald-950/60" />
+
+        {/* Emerald glow */}
+        <div className="absolute w-96 h-96 bg-emerald-500/20 blur-[120px] rounded-full bottom-20 right-20 pointer-events-none" />
+
+        {/* Floating text card */}
+        <div className="relative z-10 max-w-sm text-center px-8">
+          <p className="text-4xl font-bold text-white tracking-tight leading-tight mb-3">
+            Your journey<br />
+            <span className="text-emerald-400">starts here.</span>
+          </p>
+          <p className="text-sm text-white/50 leading-relaxed">
+            Join thousands of traders building wealth with confidence. Sign up and take control of your financial future.
+          </p>
+        </div>
 
       </div>
 

@@ -6,18 +6,28 @@ import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
+import { Loader2 } from "lucide-react"
 
 const ChartAreaInteractive = dynamic(
   () =>
     import("@/components/chart-area-interactive").then(
       (mod) => mod.ChartAreaInteractive
     ),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
+        <Loader2 className="animate-spin" size={18} />
+        <span className="text-sm">Loading chart...</span>
+      </div>
+    ),
+  }
 )
 
 export default function Page() {
   const { data: session } = useSession()
   const [holdings, setHoldings] = useState([])
+  const [loadingHoldings, setLoadingHoldings] = useState(true)
 
   useEffect(() => {
     const fetchHoldings = async () => {
@@ -32,6 +42,8 @@ export default function Page() {
         }
       } catch (error) {
         console.error("Error fetching holdings:", error)
+      } finally {
+        setLoadingHoldings(false)
       }
     }
 
@@ -48,7 +60,14 @@ export default function Page() {
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive />
             </div>
-            <DataTable data={holdings} />
+            {loadingHoldings ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground gap-2 px-4 lg:px-6">
+                <Loader2 className="animate-spin" size={18} />
+                <span className="text-sm">Loading holdings...</span>
+              </div>
+            ) : (
+              <DataTable data={holdings} />
+            )}
           </div>
         </div>
       </div>

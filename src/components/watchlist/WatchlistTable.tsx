@@ -67,7 +67,7 @@ export default function WatchlistTable({ stocks, loading, onRemove }: Props) {
             <td className={`text-right font-mono ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
               <div className="flex items-center justify-end gap-1">
                 {stock.change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                {stock.change.toFixed(2)}%
+                {stock.change >= 0 ? "+" : ""}₹{stock.change.toFixed(2)}
               </div>
             </td>
             <td className="text-right text-muted-foreground font-mono">{fmtVolume(stock.volume)}</td>

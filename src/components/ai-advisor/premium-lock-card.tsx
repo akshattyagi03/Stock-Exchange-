@@ -2,7 +2,7 @@
 
 import { Lock, Sparkles } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 interface PremiumLockCardProps {
   title?: string
@@ -125,25 +125,26 @@ export function PremiumLockCard({
           </div>
 
           {/* CTA */}
-          <button
-            onClick={onUpgrade}
+          <Link
+            href="/billing"
             style={{
+              display: "block",
               width: "100%",
               padding: "10px 20px",
               borderRadius: 8,
-              border: "none",
               cursor: "pointer",
               fontSize: 13,
               fontWeight: 600,
               color: "#ffffff",
               background: "linear-gradient(135deg, #a855f7, #6366f1)",
               transition: "opacity 0.15s ease",
+              textAlign: "center",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.88")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.88")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
           >
             {ctaLabel}
-          </button>
+          </Link>
 
           <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", marginTop: 14 }}>
             Cancel anytime · Instant access

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { TrendingUp, TrendingDown, Activity, Loader2, Plus, Search } from "lucide-react"
+import { TrendingUp, TrendingDown, Activity, Loader2, Search, Sparkles } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,8 @@ export default function Markets() {
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<Instrument[]>([])
     const [showDropdown, setShowDropdown] = useState(false)
+    const [insight, setInsight] = useState<string>("")
+    const [insightLoading, setInsightLoading] = useState(false)
 
     const searchRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
@@ -88,10 +90,28 @@ export default function Markets() {
                 const stocksData = await stocksRes.json()
                 const indicesData = await indicesRes.json()
 
-                setStocks(stocksData.stocks || [])
-                setIndices(indicesData.indices || [])
+                const fetchedIndices = indicesData.indices || []
+                const fetchedStocks = stocksData.stocks || []
+                setStocks(fetchedStocks)
+                setIndices(fetchedIndices)
                 setSource(stocksData.source)
                 setLoading(false)
+
+                if (fetchedIndices.length > 0 && !insight) {
+                    setInsightLoading(true)
+                    fetch("/api/ai/market-insight", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            indices: fetchedIndices,
+                            gainers: fetchedStocks.filter((s: Stock) => s.change >= 0).length,
+                            losers: fetchedStocks.filter((s: Stock) => s.change < 0).length,
+                        }),
+                    })
+                        .then(r => r.json())
+                        .then(d => setInsight(d.insight || ""))
+                        .finally(() => setInsightLoading(false))
+                }
             } catch (err) {
                 console.error("Fetch error:", err)
                 setLoading(false)
@@ -281,22 +301,18 @@ export default function Markets() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Market Insight</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <Sparkles size={16} className="text-yellow-400" /> Market Insight
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-muted-foreground">
-                                Markets are showing bullish momentum led by IT and banking stocks.
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex justify-between">
-                            <CardTitle>Watchlist</CardTitle>
-                            <Plus size={16} />
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">Coming soon...</p>
+                            {insightLoading ? (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Loader2 size={14} className="animate-spin" /> Generating insight...
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground leading-relaxed">{insight || "—"}</p>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
