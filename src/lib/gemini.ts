@@ -1,18 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("Missing GEMINI_API_KEY");
+function getModel() {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("Missing GEMINI_API_KEY");
+  }
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 }
 
-// Initialize Gemini client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// ✅ Use the model your API key supports
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-});
-
 export async function streamGeminiResponse(prompt: string) {
+  const model = getModel();
   const structuredPrompt = `
 You are a professional financial analyst.
 

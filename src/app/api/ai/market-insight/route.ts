@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+function getModel() {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error("Missing GEMINI_API_KEY");
+    }
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+}
 
 export async function POST(req: NextRequest) {
     try {
         const { indices, gainers, losers } = await req.json();
+        const model = getModel();
 
         const indicesSummary = indices
             .map((i: { name: string; change: number; points: number }) =>
