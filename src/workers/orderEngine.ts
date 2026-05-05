@@ -215,14 +215,17 @@ export async function processExecuteOrder(data: OrderJobData) {
     )
   }
 
+  // Execute at the limit price (not market price) so order price = executed price
+  const executionPrice = price
+
   const session = await mongoose.startSession()
   session.startTransaction()
 
   try {
     if (orderType === "buy") {
-      await executeBuyOrder(order, marketPrice, session)
+      await executeBuyOrder(order, executionPrice, session)
     } else {
-      await executeSellOrder(order, marketPrice, session)
+      await executeSellOrder(order, executionPrice, session)
     }
 
     await OrderModel.findByIdAndUpdate(
@@ -230,7 +233,7 @@ export async function processExecuteOrder(data: OrderJobData) {
       {
         $set: {
           status: "executed",
-          executedPrice: marketPrice,
+          executedPrice: executionPrice,
           executedAt: new Date(),
           executedQuantity: order.quantity,
           remainingQuantity: 0,
@@ -251,12 +254,12 @@ export async function processExecuteOrder(data: OrderJobData) {
         stockName: order.stockName,
         orderType,
         quantity: order.quantity,
-        executedPrice: marketPrice,
+        executedPrice: executionPrice,
         executedAt: new Date(),
       })
     }
 
-    return { status: "executed" as const, executedPrice: marketPrice }
+    return { status: "executed" as const, executedPrice: executionPrice }
   } catch (error) {
     await session.abortTransaction()
     throw error
