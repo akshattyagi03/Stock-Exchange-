@@ -113,11 +113,16 @@ export async function executeSellOrder(
   const qty = order.remainingQuantity
   const proceeds = Number((executedPrice * qty).toFixed(2))
 
-  await HoldingModel.findOneAndUpdate(
+  const updatedHolding = await HoldingModel.findOneAndUpdate(
     { user: order.user, stockName: order.stockName },
     { $inc: { frozenQuantity: -qty } },
-    { session }
+    { session, new: true }
   )
+
+  // Remove holding if both quantities are 0
+  if (updatedHolding && updatedHolding.availableQuantity === 0 && updatedHolding.frozenQuantity === 0) {
+    await HoldingModel.findByIdAndDelete(updatedHolding._id, { session })
+  }
 
   await UserModel.findByIdAndUpdate(
     order.user,
@@ -150,7 +155,7 @@ export async function cancelOrder(
       { session }
     )
   } else {
-    await HoldingModel.findOneAndUpdate(
+    const updatedHolding = await HoldingModel.findOneAndUpdate(
       { user: order.user, stockName: order.stockName },
       {
         $inc: {
@@ -158,8 +163,12 @@ export async function cancelOrder(
           availableQuantity: remainingQty,
         },
       },
-      { session }
+      { session, new: true }
     )
+
+    if (updatedHolding && updatedHolding.availableQuantity === 0 && updatedHolding.frozenQuantity === 0) {
+      await HoldingModel.findByIdAndDelete(updatedHolding._id, { session })
+    }
   }
 
   await OrderModel.findByIdAndUpdate(
