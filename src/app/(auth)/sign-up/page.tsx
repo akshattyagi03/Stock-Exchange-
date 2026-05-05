@@ -16,7 +16,7 @@ export default function SignupPage() {
             <div className="bg-white text-black flex size-6 items-center justify-center rounded-md">
               <GalleryVerticalEnd className="size-4" />
             </div>
-            Acme Inc.
+            TradeX Inc.
           </a>
         </div>
 

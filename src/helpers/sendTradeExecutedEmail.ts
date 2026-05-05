@@ -34,7 +34,7 @@ export async function sendTradeExecutedEmail({
 
   try {
     await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      from: "TradeX <onboarding@resend.dev>",
       to: email,
       subject: `STOCKS EX | ${orderType.toUpperCase()} Order Executed — ${stockName}`,
       react: TradeExecutedEmail({
