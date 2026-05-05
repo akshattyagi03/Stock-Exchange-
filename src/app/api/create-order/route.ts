@@ -11,6 +11,8 @@ import UserModel from "@/models/User"
 import { generateOrderId } from "@/utils/generateOrderId"
 import { cancelOrder, executeBuyOrder, executeSellOrder } from "@/workers/orderEngine"
 import { getStockPrice } from "@/lib/fmp"
+import { getInstrumentKeyBySymbol } from "@/lib/instruments"
+import { getStockQuote } from "@/lib/upstox"
 
 const ORDER_RETRY_DELAY_MS = 30_000
 const MAX_ORDER_RETRY_ATTEMPTS = 1_000
@@ -47,11 +49,11 @@ export async function POST(request: Request) {
     let price: number
 
     if (isMarketOrder) {
-      const marketPrice = await getStockPrice(stockName)
-      if (!marketPrice) {
-        throw new Error("Could not fetch market price. Please try again.")
-      }
-      price = marketPrice
+      const instrumentKey = getInstrumentKeyBySymbol(stockName)
+      if (!instrumentKey) throw new Error("Symbol not found. Please try again.")
+      const quote = await getStockQuote(instrumentKey, process.env.UPSTOX_ACCESS_TOKEN!)
+      if (!quote?.last_price) throw new Error("Could not fetch market price. Please try again.")
+      price = quote.last_price
     } else {
       price = Number(payload.price)
     }

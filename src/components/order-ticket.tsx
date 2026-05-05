@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -30,13 +30,32 @@ export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProp
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy")
   const [quantity, setQuantity] = useState("1")
   const [price, setPrice] = useState(defaultPrice ? String(defaultPrice) : "")
+  const [currentPrice, setCurrentPrice] = useState<number | null>(defaultPrice ?? null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hoveredType, setHoveredType] = useState<"buy" | "sell" | null>(null)
 
+  useEffect(() => {
+    if (defaultPrice) {
+      setCurrentPrice(defaultPrice)
+      setPrice(String(defaultPrice))
+      return
+    }
+    fetch(`/api/stocks/${stockName}/info`)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.price) {
+          setCurrentPrice(data.price)
+          setPrice(String(data.price))
+        }
+      })
+      .catch(() => {})
+  }, [stockName, defaultPrice])
+
   const isMarketOrder = !price
+  const effectivePrice = price ? Number(price) : (currentPrice ?? 0)
   const estimatedValue =
-    Number(quantity) > 0 && Number(price) > 0
-      ? Number(quantity) * Number(price)
+    Number(quantity) > 0 && effectivePrice > 0
+      ? Number(quantity) * effectivePrice
       : 0
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -195,7 +214,7 @@ export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProp
                   type="number"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="Market price"
+                  placeholder={currentPrice ? `₹${currentPrice.toLocaleString("en-IN")} (market)` : "Market price"}
                   className="h-10 pl-7 font-mono text-sm"
                 />
               </div>
