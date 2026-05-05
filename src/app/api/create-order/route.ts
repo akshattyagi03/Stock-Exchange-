@@ -9,7 +9,7 @@ import HoldingModel from "@/models/Holdings"
 import OrderModel, { type IOrder } from "@/models/Orders"
 import UserModel from "@/models/User"
 import { generateOrderId } from "@/utils/generateOrderId"
-import { cancelOrder } from "@/workers/orderEngine"
+import { cancelOrder, executeBuyOrder, executeSellOrder } from "@/workers/orderEngine"
 import { getStockPrice } from "@/lib/fmp"
 
 const ORDER_RETRY_DELAY_MS = 30_000
@@ -143,11 +143,9 @@ export async function POST(request: Request) {
     transactionCommitted = true
 
     if (isMarketOrder) {
-      // Execute immediately at market price
       const execSession = await mongoose.startSession()
       execSession.startTransaction()
       try {
-        const { executeBuyOrder, executeSellOrder } = await import("@/workers/orderEngine") as any
         if (orderType === "buy") {
           await executeBuyOrder(createdOrder, price, execSession)
         } else {

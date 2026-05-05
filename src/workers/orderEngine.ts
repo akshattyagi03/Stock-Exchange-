@@ -44,7 +44,7 @@ export async function getSimulatedPrice(stockName: string, orderPrice: number) {
   return fallback
 }
 
-async function executeBuyOrder(
+export async function executeBuyOrder(
   order: IOrder,
   executedPrice: number,
   session: mongoose.ClientSession
@@ -105,7 +105,7 @@ async function executeBuyOrder(
   )
 }
 
-async function executeSellOrder(
+export async function executeSellOrder(
   order: IOrder,
   executedPrice: number,
   session: mongoose.ClientSession
