@@ -15,8 +15,18 @@ export async function GET(req: NextRequest) {
     }
 
     await dbConnect();
+
+    // Clean up stale 0/0 holdings
+    await HoldingModel.deleteMany({
+      user: session.user._id,
+      availableQuantity: 0,
+      frozenQuantity: 0,
+    });
     
-    const holdings = await HoldingModel.find({ user: session.user._id });
+    const holdings = await HoldingModel.find({
+      user: session.user._id,
+      $or: [{ availableQuantity: { $gt: 0 } }, { frozenQuantity: { $gt: 0 } }]
+    });
     
     return NextResponse.json({ holdings }, { status: 200 });
   } catch (error) {
@@ -35,7 +45,10 @@ export async function POST() {
 
     await dbConnect();
     
-    const holdings = await HoldingModel.find({ user: session.user._id });
+    const holdings = await HoldingModel.find({
+      user: session.user._id,
+      $or: [{ availableQuantity: { $gt: 0 } }, { frozenQuantity: { $gt: 0 } }]
+    });
     
     let totalInvestment = 0;
     const holdingsData = holdings.map(holding => {
