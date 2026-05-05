@@ -112,7 +112,7 @@ export default function Markets() {
                     })
                         .then(r => r.json())
                         .then(d => setInsight(d.insight || ""))
-                        .catch(() => setInsight("Unable to load insight."))
+                        .catch(() => { insightFetched.current = false })
                         .finally(() => setInsightLoading(false))
                 }
             } catch (err) {
