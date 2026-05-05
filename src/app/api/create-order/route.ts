@@ -10,6 +10,7 @@ import OrderModel, { type IOrder } from "@/models/Orders"
 import UserModel from "@/models/User"
 import { generateOrderId } from "@/utils/generateOrderId"
 import { cancelOrder } from "@/workers/orderEngine"
+import { getStockPrice } from "@/lib/fmp"
 
 const ORDER_RETRY_DELAY_MS = 30_000
 const MAX_ORDER_RETRY_ATTEMPTS = 1_000
@@ -40,8 +41,20 @@ export async function POST(request: Request) {
     const payload = await request.json()
     const stockName = String(payload.stockName || "").trim().toUpperCase()
     const quantity = Number(payload.quantity)
-    const price = Number(payload.price)
     const orderType = payload.orderType
+    const isMarketOrder = payload.isMarketOrder === true
+
+    let price: number
+
+    if (isMarketOrder) {
+      const marketPrice = await getStockPrice(stockName)
+      if (!marketPrice) {
+        throw new Error("Could not fetch market price. Please try again.")
+      }
+      price = marketPrice
+    } else {
+      price = Number(payload.price)
+    }
 
     if (!stockName || !quantity || !price || !orderType) {
       throw new Error("Missing required fields")
@@ -129,24 +142,49 @@ export async function POST(request: Request) {
     await mongoSession.commitTransaction()
     transactionCommitted = true
 
-    await orderExecutionQueue.add(
-      "execute-order",
-      {
-        orderId: createdOrder.orderId,
-        stockName: createdOrder.stockName,
-        orderType,
-        price,
-        quantity,
-        userId: userId.toString(),
-      },
-      {
-        jobId: createdOrder.orderId,
-        attempts: MAX_ORDER_RETRY_ATTEMPTS,
-        backoff: { type: "fixed", delay: ORDER_RETRY_DELAY_MS },
-        removeOnComplete: true,
-        removeOnFail: false,
+    if (isMarketOrder) {
+      // Execute immediately at market price
+      const execSession = await mongoose.startSession()
+      execSession.startTransaction()
+      try {
+        const { executeBuyOrder, executeSellOrder } = await import("@/workers/orderEngine") as any
+        if (orderType === "buy") {
+          await executeBuyOrder(createdOrder, price, execSession)
+        } else {
+          await executeSellOrder(createdOrder, price, execSession)
+        }
+        await OrderModel.findByIdAndUpdate(
+          createdOrder._id,
+          { $set: { status: "executed", executedPrice: price, executedAt: new Date(), executedQuantity: createdOrder!.quantity, remainingQuantity: 0 } },
+          { session: execSession }
+        )
+        await execSession.commitTransaction()
+      } catch (execError) {
+        await execSession.abortTransaction()
+        throw execError
+      } finally {
+        execSession.endSession()
       }
-    )
+    } else {
+      await orderExecutionQueue.add(
+        "execute-order",
+        {
+          orderId: createdOrder.orderId,
+          stockName: createdOrder.stockName,
+          orderType,
+          price,
+          quantity,
+          userId: userId.toString(),
+        },
+        {
+          jobId: createdOrder.orderId,
+          attempts: MAX_ORDER_RETRY_ATTEMPTS,
+          backoff: { type: "fixed", delay: ORDER_RETRY_DELAY_MS },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      )
+    }
 
     return NextResponse.json(
       {

@@ -32,6 +32,7 @@ export default function OrderTicket({ stockName }: OrderTicketProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hoveredType, setHoveredType] = useState<"buy" | "sell" | null>(null)
 
+  const isMarketOrder = !price
   const estimatedValue =
     Number(quantity) > 0 && Number(price) > 0
       ? Number(quantity) * Number(price)
@@ -49,8 +50,9 @@ export default function OrderTicket({ stockName }: OrderTicketProps) {
         body: JSON.stringify({
           stockName,
           quantity: Number(quantity),
-          price: Number(price),
+          price: price ? Number(price) : null,
           orderType,
+          isMarketOrder,
         }),
       })
 
@@ -103,7 +105,7 @@ export default function OrderTicket({ stockName }: OrderTicketProps) {
           </span>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-          Fake-money limit order · checked every 30s until execution or market close
+          {isMarketOrder ? "Market order · executes instantly at current price" : "Limit order · checked every 30s until execution or market close"}
         </p>
       </CardHeader>
 
@@ -176,7 +178,7 @@ export default function OrderTicket({ stockName }: OrderTicketProps) {
                 style={{ color: "hsl(var(--muted-foreground))" }}
                 htmlFor="price"
               >
-                Limit Price
+                Limit Price <span style={{ color: "hsl(var(--muted-foreground))", fontWeight: 400, textTransform: "none" }}>(optional)</span>
               </label>
               <div className="relative">
                 <span
@@ -192,8 +194,7 @@ export default function OrderTicket({ stockName }: OrderTicketProps) {
                   type="number"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  required
+                  placeholder="Market price"
                   className="h-10 pl-7 font-mono text-sm"
                 />
               </div>
