@@ -1,20 +1,11 @@
 "use client"
 
-import { createChart, ColorType, CandlestickSeries, HistogramSeries, IChartApi, ISeriesApi, type CandlestickData, type HistogramData, type Time } from "lightweight-charts"
+import { createChart, ColorType, CandlestickSeries, HistogramSeries, IChartApi, ISeriesApi } from "lightweight-charts"
 import { useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 
 interface Props {
   symbol: string
-}
-
-type ChartCandle = {
-  time: number
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
 }
 
 const FALLBACK_RANGES: Record<string, string[]> = {
@@ -23,34 +14,17 @@ const FALLBACK_RANGES: Record<string, string[]> = {
   "1Y": [],
 }
 
-function isNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value)
-}
-
-function isChartCandle(value: unknown): value is ChartCandle {
-  if (!value || typeof value !== "object") return false
-
-  const candle = value as Partial<Record<keyof ChartCandle, unknown>>
-  return (
-    isNumber(candle.time) &&
-    isNumber(candle.open) &&
-    isNumber(candle.high) &&
-    isNumber(candle.low) &&
-    isNumber(candle.close) &&
-    isNumber(candle.volume)
-  )
-}
-
-function isCandlePoint(value: unknown): value is Omit<ChartCandle, "time" | "volume"> {
-  if (!value || typeof value !== "object") return false
-
-  const candle = value as Partial<Record<"open" | "high" | "low" | "close", unknown>>
-  return (
-    isNumber(candle.open) &&
-    isNumber(candle.high) &&
-    isNumber(candle.low) &&
-    isNumber(candle.close)
-  )
+async function fetchWithDayFallback(symbol: string): Promise<any[]> {
+  const today = new Date()
+  for (let i = 0; i < 10; i++) {
+    const date = new Date(today)
+    date.setDate(today.getDate() - i)
+    const dateStr = date.toISOString().split("T")[0]
+    const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=1D&date=${dateStr}`)
+    const data = await res.json()
+    if (Array.isArray(data) && data.length > 0) return data
+  }
+  return []
 }
 
 export default function StockChart({ symbol }: Props) {
@@ -153,8 +127,8 @@ export default function StockChart({ symbol }: Props) {
         minute: "2-digit",
       })
 
-      const data = param.seriesData.get(candleSeries)
-      if (!isCandlePoint(data)) {
+      const data = param.seriesData.get(candleSeries) as any
+      if (!data) {
         toolTip.style.display = "none"
         return
       }
@@ -188,7 +162,7 @@ export default function StockChart({ symbol }: Props) {
       chart.remove()
       toolTip.remove()
     }
-  }, [theme, resolvedTheme])
+  }, [])
 
   /* ---------------- Handle Theme Change ---------------- */
 
@@ -211,8 +185,14 @@ export default function StockChart({ symbol }: Props) {
       volumeSeriesRef.current?.setData([])
 
       try {
-        const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=${encodeURIComponent(currentRange)}`)
-        const data: unknown = await res.json()
+        let data: any[]
+
+        if (currentRange === "1D") {
+          data = await fetchWithDayFallback(symbol)
+        } else {
+          const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=${encodeURIComponent(currentRange)}`)
+          data = await res.json()
+        }
 
         if (!Array.isArray(data) || data.length === 0) {
           const fallbacks = FALLBACK_RANGES[currentRange]
@@ -225,18 +205,16 @@ export default function StockChart({ symbol }: Props) {
           return
         }
 
-        const validData = data.filter(isChartCandle)
-
-        const candleData: CandlestickData<Time>[] = validData.map((d) => ({
-          time: d.time as Time,
+        const candleData = data.map((d: any) => ({
+          time: d.time,
           open: d.open,
           high: d.high,
           low: d.low,
           close: d.close,
         }))
 
-        const volumeData: HistogramData<Time>[] = validData.map((d) => ({
-          time: d.time as Time,
+        const volumeData = data.map((d: any) => ({
+          time: d.time,
           value: d.volume,
           color: d.close >= d.open ? "#22c55e50" : "#ef444450",
         }))

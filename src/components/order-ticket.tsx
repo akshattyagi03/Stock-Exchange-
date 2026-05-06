@@ -29,7 +29,7 @@ export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProp
   const router = useRouter()
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy")
   const [quantity, setQuantity] = useState("1")
-  const [price, setPrice] = useState("")
+  const [price, setPrice] = useState(defaultPrice ? String(defaultPrice) : "")
   const [currentPrice, setCurrentPrice] = useState<number | null>(defaultPrice ?? null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hoveredType, setHoveredType] = useState<"buy" | "sell" | null>(null)
@@ -37,6 +37,7 @@ export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProp
   useEffect(() => {
     if (defaultPrice) {
       setCurrentPrice(defaultPrice)
+      setPrice(String(defaultPrice))
       return
     }
     fetch(`/api/stocks/${stockName}/info`)
@@ -44,6 +45,7 @@ export default function OrderTicket({ stockName, defaultPrice }: OrderTicketProp
       .then(data => {
         if (data?.price) {
           setCurrentPrice(data.price)
+          setPrice(String(data.price))
         }
       })
       .catch(() => {})
