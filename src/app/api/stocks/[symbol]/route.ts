@@ -46,6 +46,68 @@ function toChartData(candles: UpstoxCandle[]) {
     .reverse()
 }
 
+function mergeCandles(...groups: UpstoxCandle[][]) {
+  const candlesByTime = new Map<string, UpstoxCandle>()
+
+  for (const group of groups) {
+    for (const candle of group) {
+      candlesByTime.set(candle[0], candle)
+    }
+  }
+
+  return Array.from(candlesByTime.values()).sort(
+    (a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()
+  )
+}
+
+function getIstBucketTimestamp(timestamp: string, intervalMinutes: number) {
+  const date = new Date(timestamp)
+  const istDate = new Date(date.getTime() + IST_OFFSET_MS)
+  const bucketMinutes =
+    Math.floor(istDate.getUTCMinutes() / intervalMinutes) * intervalMinutes
+
+  istDate.setUTCMinutes(bucketMinutes, 0, 0)
+
+  return new Date(istDate.getTime() - IST_OFFSET_MS).toISOString()
+}
+
+function aggregateCandles(candles: UpstoxCandle[], intervalMinutes: number) {
+  const buckets = new Map<string, UpstoxCandle[]>()
+
+  for (const candle of candles) {
+    const bucket = getIstBucketTimestamp(candle[0], intervalMinutes)
+    buckets.set(bucket, [...(buckets.get(bucket) || []), candle])
+  }
+
+  return Array.from(buckets.entries()).map(([timestamp, bucketCandles]) => {
+    const sorted = [...bucketCandles].sort(
+      (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
+    )
+    const open = sorted[0][1]
+    const high = Math.max(...sorted.map((candle) => Number(candle[2])))
+    const low = Math.min(...sorted.map((candle) => Number(candle[3])))
+    const close = sorted[sorted.length - 1][4]
+    const volume = sorted.reduce((sum, candle) => sum + Number(candle[5]), 0)
+
+    return [timestamp, open, high, low, close, volume] as UpstoxCandle
+  })
+}
+
+function aggregateDailyCandle(candles: UpstoxCandle[], dateString: string) {
+  if (candles.length === 0) return []
+
+  const sorted = [...candles].sort(
+    (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
+  )
+  const open = sorted[0][1]
+  const high = Math.max(...sorted.map((candle) => Number(candle[2])))
+  const low = Math.min(...sorted.map((candle) => Number(candle[3])))
+  const close = sorted[sorted.length - 1][4]
+  const volume = sorted.reduce((sum, candle) => sum + Number(candle[5]), 0)
+
+  return [[`${dateString}T00:00:00+05:30`, open, high, low, close, volume] as UpstoxCandle]
+}
+
 async function fetchCandles(url: string, accessToken: string) {
   const response = await axios.get(url, {
     headers: {
@@ -60,7 +122,7 @@ async function fetchCandles(url: string, accessToken: string) {
 function intradayUrl(instrumentKey: string) {
   return `https://api.upstox.com/v2/historical-candle/intraday/${encodeURIComponent(
     instrumentKey
-  )}/5minutes`
+  )}/5minute`
 }
 
 function historicalMinuteUrl(
@@ -126,6 +188,21 @@ async function fetchOneDayCandles({
   return []
 }
 
+async function fetchTodayIntradayCandles(
+  instrumentKey: string,
+  accessToken: string,
+  todayStr: string
+) {
+  const intradayCandles = await fetchCandles(
+    intradayUrl(instrumentKey),
+    accessToken
+  )
+
+  return intradayCandles.filter((candle) =>
+    candleMatchesIstDate(candle, todayStr)
+  )
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ symbol: string }> }
@@ -141,7 +218,7 @@ export async function GET(
     const today = new Date()
     const todayStr = getIstDateString(today)
     const marketOpen = isMarketOpen(today)
-    const cacheDateKey = range === "1D" ? dateParam || todayStr : "latest"
+    const cacheDateKey = range === "1D" ? dateParam || todayStr : todayStr
     const cacheKey = `stock:${upperSymbol}:${range}:${cacheDateKey}`
 
     const cached = await redis.get(cacheKey)
@@ -172,33 +249,48 @@ export async function GET(
         marketOpen,
       })
     } else if (range === "1W") {
-      candles = await fetchCandles(
+      const historicalCandles = await fetchCandles(
         `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
           instrumentKey
         )}/minutes/15/${todayStr}/${subtractDays(todayStr, 7)}`,
         accessToken
       )
+      const todayCandles = aggregateCandles(
+        await fetchTodayIntradayCandles(instrumentKey, accessToken, todayStr),
+        15
+      )
+      candles = mergeCandles(historicalCandles, todayCandles)
     } else if (range === "1M") {
-      candles = await fetchCandles(
+      const historicalCandles = await fetchCandles(
         `https://api.upstox.com/v3/historical-candle/${encodeURIComponent(
           instrumentKey
         )}/minutes/60/${todayStr}/${subtractDays(todayStr, 30)}`,
         accessToken
       )
+      const todayCandles = aggregateCandles(
+        await fetchTodayIntradayCandles(instrumentKey, accessToken, todayStr),
+        60
+      )
+      candles = mergeCandles(historicalCandles, todayCandles)
     } else if (range === "1Y") {
-      candles = await fetchCandles(
+      const historicalCandles = await fetchCandles(
         `https://api.upstox.com/v2/historical-candle/${encodeURIComponent(
           instrumentKey
         )}/day/${todayStr}/${subtractDays(todayStr, 365)}`,
         accessToken
       )
+      const todayCandles = aggregateDailyCandle(
+        await fetchTodayIntradayCandles(instrumentKey, accessToken, todayStr),
+        todayStr
+      )
+      candles = mergeCandles(historicalCandles, todayCandles)
     }
 
     const result = toChartData(candles)
 
     if (result.length > 0) {
       await redis.set(cacheKey, JSON.stringify(result), {
-        EX: range === "1D" && marketOpen ? 30 : 300,
+        EX: marketOpen ? 30 : 300,
       })
     }
 
