@@ -15,13 +15,22 @@ const FALLBACK_RANGES: Record<string, string[]> = {
 }
 
 async function fetchWithDayFallback(symbol: string): Promise<any[]> {
+  // First try without date — API will use intraday if market is open
+  const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=1D`)
+  if (res.ok) {
+    const data = await res.json()
+    if (Array.isArray(data) && data.length > 0) return data
+  }
+
+  // Fallback to previous trading days
   const today = new Date()
-  for (let i = 0; i < 10; i++) {
+  for (let i = 1; i <= 10; i++) {
     const date = new Date(today)
     date.setDate(today.getDate() - i)
     const dateStr = date.toISOString().split("T")[0]
-    const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=1D&date=${dateStr}`)
-    const data = await res.json()
+    const r = await fetch(`/api/stocks/${encodeURIComponent(symbol)}?range=1D&date=${dateStr}`)
+    if (!r.ok) continue
+    const data = await r.json()
     if (Array.isArray(data) && data.length > 0) return data
   }
   return []
