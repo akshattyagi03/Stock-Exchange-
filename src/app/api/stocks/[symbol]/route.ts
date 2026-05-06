@@ -60,7 +60,7 @@ async function fetchCandles(url: string, accessToken: string) {
 function intradayUrl(instrumentKey: string) {
   return `https://api.upstox.com/v2/historical-candle/intraday/${encodeURIComponent(
     instrumentKey
-  )}/1minute`
+  )}/5minutes`
 }
 
 function historicalMinuteUrl(
