@@ -1,25 +1,31 @@
 # Stock‑Ex
 
-Stock‑Ex is a full-stack **investment tracking** and **order placement** application built with **Next.js 14 (App Router)**, **TypeScript**, and **MongoDB**.  It lets users sign up, authenticate via email verification, maintain a watchlist of stocks, and create orders through an integrated brokerage API (Upstox).
+Stock‑Ex is a full-stack **investment tracking** and **order placement** application built with **Next.js 14 (App Router)**, **TypeScript**, and **MongoDB**. It lets users sign up, authenticate via email verification, maintain watchlists, place and manage orders, and get AI-powered market insights — all in a real-time dashboard.
 
 ---
 
 ## 🧱 Features
 
 - Email/password and Google OAuth authentication with email verification
-- Dashboard with portfolio overview and performance metrics
-- Real-time portfolio tracking with P&L calculations
-- Redis caching for optimized API performance
-- Holdings management with detailed position tracking
-- User watchlist management (add/remove/view stocks)
-- Order creation and retrieval powered by a custom service
-- AI-powered stock analysis and comparison using Google Gemini 2.5 Flash
-- Interactive charts and analytics
-- Market data integration with Upstox API
+- Dashboard with portfolio overview, P&L cards, and holdings table
+- Real-time portfolio tracking with overall and daily P&L calculations
+- Live market data with indices (NIFTY, SENSEX, etc.) and stock prices
+- AI-powered stock analysis, stock comparison, and market insights via Google Gemini 2.5 Flash
+- AI portfolio analytics (Premium tier)
+- Order placement with market and limit order support
+- Market hours enforcement — orders blocked outside Mon–Fri 9:15 AM–3:30 PM IST
+- Background order execution worker with BullMQ + Redis
+- Automatic cancellation of pending orders at market close
+- Holdings management with average buy price and invested value tracking
+- Trade history and order management (cancel, modify)
+- User watchlist management (create, add/remove stocks, multiple lists)
+- Portfolio analytics with charts and sector breakdown
 - Funds management (deposits and withdrawals)
-- Client‑side form validation using Zod schemas
-- Robust API routes under `src/app/api`
-- Context provider for auth state and helper utilities
+- Billing and premium subscription support
+- Account settings with trading preferences and notification controls
+- Trade execution email alerts via Resend
+- Redis caching for optimized API performance
+- Client-side form validation using Zod schemas
 
 ---
 
@@ -33,8 +39,9 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 | Authentication | NextAuth.js (Credentials + Google OAuth) |
 | Styling | Tailwind CSS + Shadcn UI |
 | Charts | Recharts + Lightweight Charts |
-| Email | Resend (for verification emails) |
+| Email | Resend |
 | AI | Google Gemini 2.5 Flash |
+| Queue / Worker | BullMQ |
 | Caching | Redis |
 | External API | Upstox broker API |
 
@@ -42,22 +49,15 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 
 ## 🚀 Getting Started
 
-> **Note:** When adding interactive React components such as forms or buttons that rely on client-side hooks (e.g. `useState`, `useForm`, `signIn` from NextAuth), make sure the file begins with the `"use client"` directive. Without it the component will be rendered as a server component and event handlers (like `onClick`) will be stripped.
->
-> For example, `src/components/login-form.tsx` needs the directive in order for the login button and Google sign-in to work properly.
-
-
 1. **Install dependencies**
 
    ```bash
    npm install
-   # or yarn
-   # or pnpm install
    ```
 
 2. **Environment variables**
 
-   Create a `.env.local` file at project root with the following keys:
+   Create a `.env.local` file at project root:
 
    ```env
    MONGODB_URI=your-mongodb-connection-string
@@ -83,7 +83,13 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-4. **Build and production**
+4. **Run the background worker** (required for order execution)
+
+   ```bash
+   npm run worker
+   ```
+
+5. **Build and production**
 
    ```bash
    npm run build
@@ -92,65 +98,107 @@ Stock‑Ex is a full-stack **investment tracking** and **order placement** appli
 
 ---
 
-## 📁 Project Structure (key folders)
+## 📁 Project Structure
 
 ```
 /src
-  /app               ← Next.js routes, pages, and layouts
-    /(auth)          ← authentication pages (sign-in, sign-up, verify)
-    /(dashboard)     ← protected dashboard routes
-      /dashboard     ← main dashboard with portfolio overview
-      /holdings      ← holdings management
-      /orders        ← order history and management
-      /watchlist     ← stock watchlist
-      /markets       ← market data and charts
-      /ai-advisor    ← AI-powered stock analysis
-      /analytics     ← portfolio analytics
-      /funds         ← funds management
-    /api             ← serverless route handlers
-      /ai            ← AI-powered analysis endpoints (analyze, compare)
-      /auth          ← NextAuth configuration
-      /sign-up       ← user registration endpoint
-      /verify-code   ← email verification endpoint
-      /check-email-unique ← email validation endpoint
-      /holdings      ← holdings CRUD operations
-      /orders        ← order management (create, get)
-      /watchlist     ← watchlist operations
-      /markets       ← market data endpoints
+  /app
+    /(auth)              ← sign-in, sign-up, verify pages
+    /(dashboard)         ← protected dashboard routes
+      /dashboard         ← portfolio overview, P&L cards, holdings table
+      /holdings          ← holdings management
+      /orders            ← order history
+      /trade-history     ← executed trades log
+      /watchlist         ← stock watchlists
+      /markets           ← live market data, indices, stock search
+        /[stock]         ← individual stock page with charts
+      /ai-advisor        ← AI stock analysis, comparison, portfolio analytics
+      /analytics         ← portfolio analytics and charts
+      /funds             ← deposits and withdrawals
+      /billing           ← subscription and premium plans
+      /settings          ← account and trading preferences
+      /quick-create      ← quick order placement
+    /api
+      /ai
+        /analyze         ← AI stock analysis (streaming)
+        /compare         ← AI stock comparison (streaming)
+        /portfolio       ← AI portfolio analysis
+        /market-insight  ← AI market insight summary
+      /auth              ← NextAuth configuration
+      /sign-up           ← user registration
+      /verify-code       ← email verification
+      /check-email-unique
+      /create-order      ← order placement with market hours check
+      /get-orders        ← fetch user orders
+      /orders
+        /cancel          ← cancel an order
+        /modify          ← modify an order
+      /holdings          ← holdings CRUD
+      /markets           ← live market data
+      /indices           ← market indices (NIFTY, SENSEX, etc.)
+      /stocks/[symbol]   ← stock info, company details, quotes
+      /search            ← instrument search
+      /watchlist         ← watchlist CRUD (create, add, remove)
       /portfolio-summary ← portfolio metrics
-      /upstox        ← Upstox API integration
-  /components        ← shared React components
-    /ui              ← Shadcn UI components
-  /context           ← React context providers (AuthProvider)
-  /helpers           ← helper functions (email sending)
-  /hooks             ← custom React hooks
-  /lib               ← utilities for DB, APIs, Gemini AI, Upstox
-  /models            ← Mongoose schemas (User, Orders, Holdings)
-  /schemas           ← Zod validation schemas
-    /authSchema      ← authentication schemas
-    /inputSchema     ← input validation schemas
-    /orderSchema     ← order validation schemas
-  /services          ← domain logic (orders, watchlists)
-  /types             ← TypeScript type definitions
-  /utils             ← helper functions
-/emails              ← email templates (VerificationEmail)
+      /portfolio-analytics
+      /funds             ← deposit/withdrawal
+      /trades            ← trade history
+      /settings          ← user settings and preferences
+      /billing           ← billing and subscription
+      /upstox            ← Upstox candles and watchlist proxy
+  /components            ← shared React components
+    /ui                  ← Shadcn UI primitives
+    /ai-advisor          ← AI advisor tab components
+    /watchlist           ← watchlist table and search
+  /context               ← AuthProvider
+  /helpers               ← email sending helpers
+  /hooks                 ← custom React hooks
+  /lib                   ← DB, Redis, Gemini, Upstox, BullMQ clients
+  /models                ← Mongoose schemas (User, Orders, Holdings, Watchlist)
+  /schemas               ← Zod validation schemas
+  /services              ← order service logic
+  /types                 ← TypeScript type definitions
+  /utils                 ← utility functions
+  /workers
+    /orderWorker.ts      ← BullMQ worker entry point (runs on Render)
+    /orderEngine.ts      ← order execution, cancellation, market hours logic
+/emails                  ← React Email templates
 ```
 
 ---
 
-## 🧪 Testing
+## ⚙️ Background Worker
 
-This project currently does not include automated tests.  You can add Jest/Playwright later.
+The order execution worker runs separately from the Next.js app. It:
+
+- Processes limit orders via BullMQ queues
+- Checks market hours before executing (Mon–Fri, 9:15 AM – 3:30 PM IST)
+- Cancels all pending orders at market close (3:30 PM IST cron)
+- Sends trade execution email alerts
+
+**Deployment:** The worker is deployed as a separate web service on [Render](https://render.com) using `Dockerfile.worker`. The Next.js app is deployed on Vercel.
 
 ---
 
 ## 📦 Deployment
 
-- Deploy on Vercel with the same environment variables.
-- Ensure your MongoDB and Redis instances are reachable from Vercel.
-- Configure Google OAuth credentials for production domain.
-- Add production URL to NEXTAUTH_URL environment variable.
-- Set up Redis for caching (Redis Cloud, Upstash, or self-hosted).
+| Service | Platform |
+|---------|----------|
+| Next.js app | Vercel |
+| Background worker | Render (Docker, `Dockerfile.worker`) |
+| Database | MongoDB Atlas |
+| Cache / Queue | Redis (Redis Cloud / Upstash) |
+
+- Set all environment variables in both Vercel and Render dashboards
+- Set `NEXTAUTH_URL` to your production Vercel URL
+- Configure Google OAuth credentials for the production domain
+- On Render, set the Dockerfile path to `./Dockerfile.worker`
+
+---
+
+## 🧪 Testing
+
+This project currently does not include automated tests. Jest and Playwright can be added later.
 
 ---
 
@@ -158,7 +206,7 @@ This project currently does not include automated tests.  You can add Jest/Playw
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/xyz`)
-3. Make your changes and add tests
+3. Make your changes
 4. Submit a pull request
 
 ---
@@ -166,4 +214,3 @@ This project currently does not include automated tests.  You can add Jest/Playw
 ## 📄 License
 
 MIT License. See the `LICENSE` file.
-

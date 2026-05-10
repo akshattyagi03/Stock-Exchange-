@@ -24,7 +24,6 @@ interface HeroSectionProps {
 const defaultNavItems: NavItem[] = [
   { id: "home", label: "Home", href: "/" },
   { id: "markets", label: "Markets", href: "/markets" },
-  { id: "how-it-works", label: "How It Works", href: "/how-it-works" },
   { id: "get-started", label: "Get Started", href: "/sign-up" },
 ]
 

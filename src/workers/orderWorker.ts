@@ -16,7 +16,6 @@ import {
 
 const MARKET_CLOSE_SWEEP_JOB = "cancel-market-close"
 
-// Keep-alive HTTP server for Render free tier
 http.createServer((_, res) => {
   res.writeHead(200)
   res.end("Worker running")
